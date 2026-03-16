@@ -1,0 +1,51 @@
+
+> aiagent@0.1.0 lint
+> eslint
+
+
+C:\laragon\www\aiagent\src\app\actions\tenants.ts
+  24:12  warning  'err' is defined but never used           @typescript-eslint/no-unused-vars
+  29:45  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:12  warning  'err' is defined but never used           @typescript-eslint/no-unused-vars
+  51:57  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  68:12  warning  'err' is defined but never used           @typescript-eslint/no-unused-vars
+  88:12  warning  'err' is defined but never used           @typescript-eslint/no-unused-vars
+
+C:\laragon\www\aiagent\src\app\actions\users.ts
+  24:12  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  48:12  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  78:12  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  98:12  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\laragon\www\aiagent\src\app\page.tsx
+  59:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\laragon\www\aiagent\src\app\tenants\page.tsx
+  355:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\laragon\www\aiagent\src\app\users\page.tsx
+  109:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\laragon\www\aiagent\src\components\ThemeProvider.tsx
+  28:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\laragon\www\aiagent\src\components\ThemeProvider.tsx:28:5
+  26 |     const saved = localStorage.getItem("theme") as Theme | null;
+  27 |     const initial = saved || "dark";
+> 28 |     setTheme(initial);
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  29 |     document.documentElement.setAttribute("data-theme", initial);
+  30 |     setMounted(true);
+  31 |   }, []);  react-hooks/set-state-in-effect
+
+C:\laragon\www\aiagent\src\components\UserModal.tsx
+  77:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 15 problems (3 errors, 12 warnings)
+
