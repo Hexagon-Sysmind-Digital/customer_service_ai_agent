@@ -288,46 +288,57 @@ export default function ReservationTemplateModal({ template, tenantId, onClose, 
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
             <div className="form-group">
-              <label className="form-label" htmlFor="tpl-type">Type</label>
-              <select
-                id="tpl-type"
-                className="form-input"
-                value={formData.template_type}
-                onChange={(e) => setFormData(prev => ({ ...prev, template_type: e.target.value }))}
-                style={{ background: "var(--background)", borderColor: "var(--card-border)" }}
-              >
-                <option value="professional">Professional</option>
-                <option value="property">Property</option>
-              </select>
+              <label className="form-label">Type</label>
+              <div className="chip-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                {[
+                  { value: "professional", label: "Professional", active: "active-blue" },
+                  { value: "property", label: "Property", active: "active-purple" },
+                ].map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, template_type: t.value }))}
+                    className={`chip-button ${formData.template_type === t.value ? t.active : ""}`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="form-group">
-              <label className="form-label" htmlFor="tpl-policy">Time Policy</label>
-              <select
-                id="tpl-policy"
-                className="form-input"
-                value={formData.time_policy}
-                onChange={(e) => setFormData(prev => ({ ...prev, time_policy: e.target.value }))}
-                style={{ background: "var(--background)", borderColor: "var(--card-border)" }}
-              >
-                <option value="fixed_slot">Fixed Slot</option>
-                <option value="flexible">Flexible</option>
-              </select>
+              <label className="form-label">Time Policy</label>
+              <div className="chip-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+                {[
+                  { value: "fixed_slot", label: "Fixed Slot", active: "active-blue" },
+                  { value: "flexible", label: "Flexible", active: "active-purple" },
+                ].map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, time_policy: p.value }))}
+                    className={`chip-button ${formData.time_policy === p.value ? p.active : ""}`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="tpl-duration">Duration (min)</label>
-              <input
-                id="tpl-duration"
-                type="number"
-                className="form-input"
-                min={5}
-                max={480}
-                value={formData.slot_duration_minutes}
-                onChange={(e) => setFormData(prev => ({ ...prev, slot_duration_minutes: parseInt(e.target.value) || 30 }))}
-                required
-              />
-            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="tpl-duration">Duration (min)</label>
+            <input
+              id="tpl-duration"
+              type="number"
+              className="form-input"
+              min={5}
+              max={480}
+              value={formData.slot_duration_minutes}
+              onChange={(e) => setFormData(prev => ({ ...prev, slot_duration_minutes: parseInt(e.target.value) || 30 }))}
+              required
+            />
           </div>
 
           {/* Resources */}

@@ -200,17 +200,22 @@ export default function ActionModal({ action, tenantId, onClose, onSuccess, onEr
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="action-type">Action Type</label>
-            <select
-              id="action-type"
-              className="form-input"
-              value={formData.action_type}
-              onChange={(e) => setFormData(prev => ({ ...prev, action_type: e.target.value }))}
-              style={{ background: "var(--background)", borderColor: "var(--card-border)" }}
-            >
-              <option value="webhook">Webhook</option>
-              <option value="reservation">Reservation</option>
-            </select>
+            <label className="form-label">Action Type</label>
+            <div className="chip-grid">
+              {[
+                { value: "webhook", label: "Webhook", active: "active-blue" },
+                { value: "reservation", label: "Reservation", active: "active-purple" },
+              ].map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, action_type: t.value }))}
+                  className={`chip-button ${formData.action_type === t.value ? t.active : ""}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Conditional: Webhook fields */}
@@ -229,19 +234,24 @@ export default function ActionModal({ action, tenantId, onClose, onSuccess, onEr
                 />
               </div>
               <div className="form-group">
-                <label className="form-label" htmlFor="action-method">API Method</label>
-                <select
-                  id="action-method"
-                  className="form-input"
-                  value={formData.api_method}
-                  onChange={(e) => setFormData(prev => ({ ...prev, api_method: e.target.value }))}
-                  style={{ background: "var(--background)", borderColor: "var(--card-border)" }}
-                >
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="DELETE">DELETE</option>
-                </select>
+                <label className="form-label">API Method</label>
+                <div className="chip-grid">
+                  {[
+                    { value: "GET", label: "GET", active: "active-blue" },
+                    { value: "POST", label: "POST", active: "active-purple" },
+                    { value: "PUT", label: "PUT", active: "active-orange" },
+                    { value: "DELETE", label: "DELETE", active: "active-red" },
+                  ].map((m) => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, api_method: m.value }))}
+                      className={`chip-button ${formData.api_method === m.value ? m.active : ""}`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}

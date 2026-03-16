@@ -170,16 +170,23 @@ export default function FaqModal({ faq, tenantId, onClose, onSuccess, onError }:
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="category">Category</label>
-            <input
-              id="category"
-              type="text"
-              className="form-input"
-              placeholder="e.g. general, billing, support"
-              value={formData.category}
-              onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-              required
-            />
+            <label className="form-label">Category</label>
+            <div className="chip-grid">
+              {[
+                { value: "general", label: "General", active: "active-blue" },
+                { value: "billing", label: "Billing", active: "active-green" },
+                { value: "support", label: "Support", active: "active-purple" },
+              ].map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, category: c.value }))}
+                  className={`chip-button ${formData.category === c.value ? c.active : ""}`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div

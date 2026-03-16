@@ -181,21 +181,29 @@ export default function UserModal({ user, onClose, onSuccess, onError }: UserMod
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
             <div className="form-group">
-              <label className="form-label" htmlFor="role">Role</label>
-              <select
-                id="role"
-                className="form-input"
-                value={formData.role}
-                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                required
-              >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-                <option value="owner">Owner</option>
-              </select>
+              <label className="form-label">Role</label>
+              <div className="chip-grid">
+                {[
+                  { value: "user", label: "User", active: "active-blue" },
+                  { value: "admin", label: "Admin", active: "active-orange" },
+                  { value: "owner", label: "Owner", active: "active-purple" },
+                ].map((r) => (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, role: r.value }))}
+                    className={`chip-button ${formData.role === r.value ? r.active : ""}`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
             </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
             <div className="form-group">
               <label className="form-label" htmlFor="password">
                 {isEditing ? "New Password" : "Password"}

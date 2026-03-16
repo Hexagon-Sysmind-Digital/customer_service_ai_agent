@@ -14,6 +14,7 @@ interface CreditModalProps {
 
 export default function CreditModal({ credit, isAdmin, onClose, onSuccess, onError }: CreditModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState(credit?.status || "unpaid");
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -227,21 +228,28 @@ export default function CreditModal({ credit, isAdmin, onClose, onSuccess, onErr
              </>
            )}
 
-           {isEditing && (
-             <div>
-               <label className="form-label">Status <span style={{color: "var(--accent-red)"}}>*</span></label>
-               <select
-                 name="status"
-                 className="form-input"
-                 required
-                 defaultValue={credit.status || "unpaid"}
-               >
-                 <option value="unpaid">Unpaid</option>
-                 <option value="paid">Paid</option>
-                 <option value="cancelled">Cancelled</option>
-               </select>
-             </div>
-           )}
+            {isEditing && (
+              <div>
+                <label className="form-label">Status <span style={{color: "var(--accent-red)"}}>*</span></label>
+                <input type="hidden" name="status" value={status} />
+                <div className="chip-grid">
+                  {[
+                    { value: "unpaid", label: "Unpaid", active: "active-red" },
+                    { value: "paid", label: "Paid", active: "active-green" },
+                    { value: "cancelled", label: "Cancelled", active: "active-orange" },
+                  ].map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setStatus(s.value)}
+                      className={`chip-button ${status === s.value ? s.active : ""}`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "8px" }}>
             <button

@@ -167,16 +167,23 @@ export default function KnowledgeModal({ knowledge, tenantId, onClose, onSuccess
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="source">Source</label>
-            <input
-              id="source"
-              type="text"
-              className="form-input"
-              placeholder="e.g. manual, database, file"
-              value={formData.source}
-              onChange={(e) => setFormData(prev => ({ ...prev, source: e.target.value }))}
-              required
-            />
+            <label className="form-label">Source</label>
+            <div className="chip-grid">
+              {[
+                { value: "manual", label: "Manual", active: "active-blue" },
+                { value: "database", label: "Database", active: "active-green" },
+                { value: "file", label: "File", active: "active-purple" },
+              ].map((s) => (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, source: s.value }))}
+                  className={`chip-button ${formData.source === s.value ? s.active : ""}`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="form-group">

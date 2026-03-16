@@ -139,30 +139,52 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
           </div>
 
           {/* Model & Language row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
             <div style={fieldGroupStyle}>
               <label style={labelStyle}>Model Name</label>
-              <select
-                className="input-field"
-                value={form.model_name}
-                onChange={(e) => updateField("model_name", e.target.value)}
-                style={{ cursor: "pointer" }}
-              >
-                <option value="qwen-plus">qwen-plus</option>
-                <option value="qwen-vl-max">qwen-vl-max</option>
-                <option value="qwen-vl-plus">qwen-vl-plus</option>
-                <option value="qwen-turbo">qwen-turbo</option>
-              </select>
+              <div className="chip-grid">
+                {[
+                  { value: "qwen-plus", label: "Qwen Plus" },
+                  { value: "qwen-vl-max", label: "Qwen VL Max" },
+                  { value: "qwen-vl-plus", label: "Qwen VL Plus" },
+                  { value: "qwen-turbo", label: "Qwen Turbo" },
+                ].map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => updateField("model_name", m.value)}
+                    className={`chip-button ${form.model_name === m.value ? "active" : ""}`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
             </div>
+            
             <div style={fieldGroupStyle}>
               <label style={labelStyle}>Language</label>
-              <input
-                className="input-field"
-                type="text"
-                placeholder="e.g. de, en, id"
-                value={form.language}
-                onChange={(e) => updateField("language", e.target.value)}
-              />
+              <div className="chip-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))" }}>
+                {[
+                  { value: "id", label: "🇮🇩 Indo" },
+                  { value: "en", label: "🇬🇧 English" },
+                  { value: "de", label: "🇩🇪 German" },
+                  { value: "fr", label: "🇫🇷 French" },
+                  { value: "es", label: "🇪🇸 Spanish" },
+                  { value: "ja", label: "🇯🇵 Japan" },
+                  { value: "zh", label: "🇨🇳 China" },
+                  { value: "ko", label: "🇰🇷 Korea" },
+                  { value: "ar", label: "🇸🇦 Arab" },
+                ].map((l) => (
+                  <button
+                    key={l.value}
+                    type="button"
+                    onClick={() => updateField("language", l.value)}
+                    className={`chip-button ${form.language === l.value ? "active" : ""}`}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
