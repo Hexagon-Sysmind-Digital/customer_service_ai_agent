@@ -49,35 +49,6 @@ export async function fetchTenants(userId?: string) {
     }
 
     if (!res.ok) {
-        // If the user is a regular 'user', they might not have permission to list tenants.
-        // In that case, we return a virtual tenant object constructed from their cookies to unblock the UI.
-        if (res.status === 403 && role === 'user' && tenantId) {
-            console.log('DEBUG [fetchTenants] 403 caught for user role, providing virtual fallback');
-            const mockTenant = { 
-                id: tenantId, 
-                name: (userName || 'My') + " Tenant",
-                api_key: "hidden-key",
-                is_active: true,
-                max_requests_per_day: 1000,
-                config: {
-                    welcome_message: "Hello! How can I help you today?",
-                    model_name: "gpt-4o",
-                    temperature: 0.7,
-                    system_prompt: "",
-                    faq_threshold: 0.8,
-                    knowledge_enabled: true,
-                    fallback_threshold: 0.5,
-                    cs_webhook_url: "",
-                    language: "en"
-                },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-            return { 
-                success: true, 
-                data: [mockTenant] 
-            };
-        }
         return { success: false, error: `${data.message || 'Error'} (${res.status}) | Role: ${role} | Tenant: ${tenantId}` }
     }
     return { success: true, data: data.data || [] }
@@ -193,35 +164,9 @@ export async function fetchTenantById(id: string) {
     console.log('DEBUG [fetchTenantById] Response:', { status: res.status, id, data });
     
     if (!res.ok) {
-        // Fallback for single tenant fetch if 403
-        if (res.status === 403 && role === 'user' && tenantIdCookie) {
-            const mockTenant = { 
-                id: tenantIdCookie, 
-                name: (userName || 'My') + " Tenant",
-                api_key: "hidden-key",
-                is_active: true,
-                max_requests_per_day: 1000,
-                config: {
-                    welcome_message: "Hello! How can I help you today?",
-                    model_name: "gpt-4o",
-                    temperature: 0.7,
-                    system_prompt: "",
-                    faq_threshold: 0.8,
-                    knowledge_enabled: true,
-                    fallback_threshold: 0.5,
-                    cs_webhook_url: "",
-                    language: "en"
-                },
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-            return { 
-                success: true, 
-                data: mockTenant 
-            };
-        }
         return { success: false, error: `${data.message || 'Error'} (${res.status}) | Role: ${role} | Tenant: ${tenantIdCookie}` }
     }
+
     return { success: true, data: data.data }
   } catch (err) {
     console.error('DEBUG [fetchTenantById] Catch Error:', err);

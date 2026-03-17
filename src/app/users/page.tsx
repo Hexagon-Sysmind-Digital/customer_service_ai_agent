@@ -8,9 +8,8 @@ import { User } from "@/types";
 import { PlusIcon, EditIcon, TrashIcon } from "@/components/icons";
 import { showToast, showConfirm } from "@/lib/swal";
 
-
 import { getMe } from "@/app/actions/auth";
-import { notFound } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 function SkeletonRow() {
   return (
@@ -24,8 +23,8 @@ function SkeletonRow() {
 }
 
 export default function UsersPage() {
+  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [accessDenied, setAccessDenied] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +55,8 @@ export default function UsersPage() {
         const user = res.data;
         setCurrentUser(user);
         if (user.role === "user") {
-          setAccessDenied(true);
+          // Redirect restricted users back to a safe page
+          router.replace("/tenants");
         } else {
           loadUsers();
         }
@@ -66,13 +66,7 @@ export default function UsersPage() {
       }
     };
     checkAccess();
-  }, [loadUsers]);
-
-  if (accessDenied) {
-    return notFound();
-  }
-
-
+  }, [loadUsers, router]);
 
   const handleCreateNew = () => {
     setSelectedUser(null);

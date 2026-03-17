@@ -51,6 +51,9 @@ export default function ReservationTemplatesPage() {
         const tenantRes = await fetchTenantById(user.tenant_id);
         if (tenantRes.success) {
           finalTenants = [tenantRes.data];
+        } else if (user.role === 'user' && (tenantRes.error?.includes('403') || tenantRes.error?.includes('Forbidden'))) {
+          // Silent fallback for regular users to avoid 403 banners
+          finalTenants = [{ id: user.tenant_id, name: '' } as any];
         } else if (!res.success) {
            setError("Failed to fetch tenant info.");
         }

@@ -707,3 +707,86 @@ input[type="checkbox"]:checked::after {
 .swal2-icon {
   border-width: 2px !important;
 }
+
+/* ===== Moving Grid (Kotak-Kotak) Sidebar Background ===== */
+.sidebar-animated-bg {
+  position: relative;
+  overflow: hidden;
+  background: var(--card-bg);
+}
+
+.sidebar-animated-bg::before,
+.sidebar-animated-bg::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Base scrolling grid (Small squares) */
+.sidebar-animated-bg::before {
+  background-image: 
+    linear-gradient(rgba(99, 102, 241, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+  animation: scrollGridBase 15s linear infinite;
+  opacity: 0.8;
+}
+
+/* Secondary scrolling grid overlay (Large squares) */
+.sidebar-animated-bg::after {
+  background-image: 
+    linear-gradient(rgba(168, 85, 247, 0.08) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.08) 1.5px, transparent 1.5px);
+  background-size: 80px 80px;
+  animation: scrollGridOverlay 30s linear infinite reverse;
+  opacity: 0.6;
+}
+
+/* Light theme adjustments */
+[data-theme="light"] .sidebar-animated-bg::before {
+  background-image: 
+    linear-gradient(rgba(99, 102, 241, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 102, 241, 0.15) 1px, transparent 1px);
+}
+
+[data-theme="light"] .sidebar-animated-bg::after {
+  background-image: 
+    linear-gradient(rgba(168, 85, 247, 0.12) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.12) 1.5px, transparent 1.5px);
+}
+
+@keyframes scrollGridBase {
+  0% { background-position: 0 0; }
+  100% { background-position: 20px 20px; }
+}
+
+@keyframes scrollGridOverlay {
+  0% { background-position: 0 0; }
+  100% { background-position: 80px 80px; }
+}
+
+/* ===== Particles Canvas Background ===== */
+.particles-bg-container {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -10;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.main-particles-container {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.8;
+  background: var(--background); /* Give the canvas container the theme background */
+}
+
+[data-theme="light"] .main-particles-container {
+  opacity: 1;
+}
+

@@ -28,7 +28,9 @@ export interface User {
   role: string;
   tenant_id?: string;
   api_key?: string;
+  is_active?: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface Faq {

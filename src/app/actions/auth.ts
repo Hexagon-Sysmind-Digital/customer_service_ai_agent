@@ -104,56 +104,14 @@ export async function getMe() {
 
   if (!token) return { success: false, error: 'Unauthorized' }
 
-  // Check if we already have user info in cookies (avoiding 403 API call)
-  const userId = cookieStore.get('user_id')?.value;
-  const userRole = cookieStore.get('user_role')?.value;
-  const userTenant = cookieStore.get('user_tenant')?.value;
-  const userName = cookieStore.get('user_name')?.value;
-
-  if (userId && userRole) {
-    return {
-      success: true,
-      data: {
-        id: userId,
-        role: userRole,
-        tenant_id: userTenant,
-        name: userName || 'User',
-        api_key: cookieStore.get('api_key')?.value || userTenant, // Fallback if needed
-      }
-    };
-  }
-
-  // Fallback to API if cookie info is missing
   try {
-    const res = await fetch(`${API_BASE}/users/me`, {
+    const res = await fetch(`${API_BASE}/auth/profile`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`
       }
     })
     
-    // If forbidden, try decoding token (it might be a JWT)
-    if (res.status === 403) {
-      try {
-        const parts = token.split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-          return {
-            success: true,
-            data: {
-              id: payload.sub || payload.id || payload.user_id,
-              name: payload.name || payload.email || 'User',
-              role: payload.role || 'user',
-              tenant_id: payload.tenant_id || payload.tid || null,
-            }
-          };
-        }
-      } catch (e) {
-        console.error('Failed to decode token fallback:', e);
-      }
-      return { success: false, error: 'Forbidden (403). Profile is restricted.' }
-    }
-
     const text = await res.text();
     let data;
     try {
@@ -162,7 +120,67 @@ export async function getMe() {
       return { success: false, error: `Invalid JSON response (${res.status})` }
     }
 
-    if (!res.ok) return { success: false, error: data.message || `API Error (${res.status})` }
+    if (!res.ok) {
+        // Fallback to cookie info if API fails (e.g. 403 or 401)
+        const userId = cookieStore.get('user_id')?.value;
+        const userRole = cookieStore.get('user_role')?.value;
+        const userTenant = cookieStore.get('user_tenant')?.value;
+        const userName = cookieStore.get('user_name')?.value;
+
+        if (userId && userRole) {
+            return {
+                success: true,
+                data: {
+                    id: userId,
+                    role: userRole,
+                    tenant_id: userTenant,
+                    name: userName || 'User',
+                    email: '', // Not in cookies
+                }
+            };
+        }
+        return { success: false, error: data.message || `API Error (${res.status})` }
+    }
+    
+    // Sync cookies with fresh data
+    if (data.success && data.data) {
+        const user = data.data;
+        cookieStore.set('user_id', user.id || '', { path: '/' });
+        cookieStore.set('user_role', user.role || 'user', { path: '/' });
+        cookieStore.set('user_tenant', user.tenant_id || '', { path: '/' });
+        cookieStore.set('user_name', user.name || '', { path: '/' });
+    }
+
+    return { success: true, data: data.data }
+  } catch (err) {
+    return { success: false, error: 'Network error' }
+  }
+}
+
+export async function updateProfile(payload: { name: string }) {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('auth_token')?.value
+
+  if (!token) return { success: false, error: 'Unauthorized' }
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/profile`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    })
+    
+    const data = await res.json()
+    if (!res.ok) return { success: false, error: data.message || 'Failed to update profile' }
+    
+    // Update name cookie if successful
+    if (data.success && data.data?.name) {
+        cookieStore.set('user_name', data.data.name, { path: '/' });
+    }
+
     return { success: true, data: data.data }
   } catch (err) {
     return { success: false, error: 'Network error' }

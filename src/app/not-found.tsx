@@ -11,9 +11,14 @@ export default function NotFound() {
       alignItems: "center",
       justifyContent: "center",
       padding: "24px",
-      background: "var(--background)",
+      background: "transparent",
+      position: "relative",
+      pointerEvents: "none"
     }}>
       <div className="glass-card" style={{
+        position: "relative",
+        zIndex: 10,
+        pointerEvents: "auto",
         maxWidth: "480px",
         width: "100%",
         padding: "48px 32px",

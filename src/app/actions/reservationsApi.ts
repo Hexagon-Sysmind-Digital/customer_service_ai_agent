@@ -5,7 +5,7 @@ import { Reservation } from "@/types";
 
 const API_BASE_URL = "https://triad.my.id/api/v1";
 
-export async function fetchReservations(tenantId: string): Promise<{ success: boolean; data?: Reservation[]; error?: string }> {
+export async function fetchReservations(tenantId: string): Promise<{ success: boolean; data?: Reservation[]; error?: string; status?: number }> {
   const cookieStore = await cookies();
   const token = cookieStore.get("auth_token")?.value;
 
@@ -23,11 +23,13 @@ export async function fetchReservations(tenantId: string): Promise<{ success: bo
 
     if (!res.ok) {
         const errText = await res.text();
-        return { success: false, error: errText || `Failed with status ${res.status}` };
+        return { success: false, error: errText || `Error ${res.status}`, status: res.status };
     }
 
     const json = await res.json();
-    return { success: true, data: json.data || json };
+    const list = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
+    return { success: true, data: list };
+
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to fetch reservations" };
   }

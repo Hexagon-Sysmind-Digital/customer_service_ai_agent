@@ -6,7 +6,7 @@ import { fetchCredits, deleteCredit, sendReminders, fetchPaymentStatus } from "@
 import { getMe } from "@/app/actions/auth";
 import { Credit, PaymentStatus, User } from "@/types";
 import { PlusIcon, EditIcon, TrashIcon } from "@/components/icons";
-import { notFound } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { showToast, showConfirm } from "@/lib/swal";
 
 
@@ -25,6 +25,7 @@ function SkeletonRow() {
 }
 
 export default function CreditsPage() {
+  const router = useRouter();
   const [credits, setCredits] = useState<Credit[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +36,6 @@ export default function CreditsPage() {
   
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [accessDenied, setAccessDenied] = useState(false);
 
 
   const loadInitialData = useCallback(async () => {
@@ -54,7 +54,7 @@ export default function CreditsPage() {
       setCurrentUser(user);
       
       if (user.role === "user") {
-        setAccessDenied(true);
+        router.replace("/tenants");
         return;
       }
       
@@ -90,13 +90,12 @@ export default function CreditsPage() {
     }
   }, []);
 
-  if (accessDenied) {
-    return notFound();
-  }
-
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
+
+
+
 
 
 

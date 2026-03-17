@@ -6,9 +6,10 @@ import { Tenant } from "@/types";
 import { maskApiKey, formatDate } from "@/lib/utils";
 import { CopyIcon, CheckIcon, PlusIcon, BotIcon, EditIcon, TrashIcon } from "@/components/icons";
 import { fetchTenants, fetchTenantById, deleteTenant } from "@/app/actions/tenants";
-import { getMe } from "@/app/actions/auth";
+import { getMe, updateProfile } from "@/app/actions/auth";
 import { User } from "@/types";
 import { showToast, showConfirm } from "@/lib/swal";
+import ProfileModal from "@/components/tenants/ProfileModal";
 
 
 
@@ -240,6 +241,7 @@ export default function TenantsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -260,13 +262,15 @@ export default function TenantsPage() {
 
       let finalTenants = [];
 
-      if (user.role === "user" && user.tenant_id) {
-        // PER REQUEST: Fetch specific tenant for non-admin user
-        const tenantRes = await fetchTenantById(user.tenant_id);
-        if (tenantRes.success) {
-          finalTenants = [tenantRes.data];
-        } else {
-          setError(tenantRes.error || "Failed to fetch your tenant.");
+      if (user.role === "user") {
+        if (user.tenant_id) {
+          const tenantRes = await fetchTenantById(user.tenant_id);
+          if (tenantRes.success) {
+            finalTenants = [tenantRes.data];
+          } else {
+            // SILENTLY handle 403 for regular users, as they might only be allowed to see profile
+            console.log('DEBUG [TenantsPage] User role tenant fetch failed (ignoring for UI):', tenantRes.error);
+          }
         }
       } else {
         // Admin/Owner: Fetch all authorized tenants
@@ -274,7 +278,6 @@ export default function TenantsPage() {
         if (res.success && res.data.length > 0) {
           finalTenants = res.data;
         } else if (user.tenant_id) {
-          // Fallback if the list call returns nothing but they have a specific ID
           const tenantRes = await fetchTenantById(user.tenant_id);
           if (tenantRes.success) {
             finalTenants = [tenantRes.data];
@@ -357,6 +360,16 @@ export default function TenantsPage() {
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {currentUser?.role === "user" && (
+                <button 
+                  className="btn-secondary" 
+                  onClick={() => setIsProfileModalOpen(true)}
+                  style={{ display: "flex", alignItems: "center", gap: 8 }}
+                >
+                  <EditIcon />
+                  Edit Profile
+                </button>
+            )}
             {(currentUser?.role === "admin" || currentUser?.role === "owner") && (
               <button className="btn-primary" onClick={handleCreateNew}>
                 <PlusIcon />
@@ -400,21 +413,64 @@ export default function TenantsPage() {
         >
           {loading
             ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-            : tenants.map((tenant) => (
-               <TenantCard 
-                 key={tenant.id} 
-                 tenant={tenant} 
-                 onEdit={handleEdit} 
-                 onDelete={handleDelete} 
-                 currentUser={currentUser}
-               />
-            ))
+            : (
+              <>
+                {currentUser?.role === "user" && (
+                  <div className="glass-card p-6 flex flex-col gap-4" style={{ borderColor: "var(--accent-primary)", borderWidth: 2, background: "rgba(99, 102, 241, 0.03)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                       <div style={{
+                         width: 48,
+                         height: 48,
+                         borderRadius: "50%",
+                         background: "var(--accent-primary-bg)",
+                         color: "var(--accent-primary)",
+                         display: "flex",
+                         alignItems: "center",
+                         justifyContent: "center",
+                         fontSize: 20,
+                         fontWeight: 700
+                       }}>
+                         {currentUser.name?.charAt(0) || "U"}
+                       </div>
+                       <div>
+                         <h3 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>{currentUser.name}</h3>
+                         <p style={{ fontSize: 13, color: "var(--text-tertiary)", margin: 0 }}>{currentUser.email}</p>
+                       </div>
+                       <span className="badge badge-active" style={{ marginLeft: "auto" }}>
+                         {currentUser.role}
+                       </span>
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", paddingTop: 8, borderTop: "1px solid var(--card-border)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                          <span>Status</span>
+                          <span style={{ color: currentUser.is_active ? "var(--accent-green)" : "var(--accent-red)", fontWeight: 600 }}>
+                            {currentUser.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span>Member Since</span>
+                          <span>{currentUser.created_at ? formatDate(currentUser.created_at) : "-"}</span>
+                        </div>
+                    </div>
+                  </div>
+                )}
+                {tenants.map((tenant) => (
+                   <TenantCard 
+                     key={tenant.id} 
+                     tenant={tenant} 
+                     onEdit={handleEdit} 
+                     onDelete={handleDelete} 
+                     currentUser={currentUser}
+                   />
+                ))}
+              </>
+            )
           }
 
         </div>
 
-        {/* Empty state */}
-        {!loading && !error && tenants.length === 0 && (
+        {/* Empty state (only for full admins who actually have zero tenants) */}
+        {!loading && !error && tenants.length === 0 && currentUser?.role !== "user" && (
           <div
             style={{
               textAlign: "center",
@@ -448,12 +504,25 @@ export default function TenantsPage() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Modals */}
       {isModalOpen && (
         <TenantModal
           tenant={selectedTenant}
           onClose={() => setIsModalOpen(false)}
           onSuccess={handleModalSuccess}
+          onError={(msg) => showToast("error", msg)}
+        />
+      )}
+
+      {isProfileModalOpen && currentUser && (
+        <ProfileModal
+          user={currentUser}
+          onClose={() => setIsProfileModalOpen(false)}
+          onSuccess={() => {
+            setIsProfileModalOpen(false);
+            showToast("success", "Profile updated successfully");
+            loadData();
+          }}
           onError={(msg) => showToast("error", msg)}
         />
       )}

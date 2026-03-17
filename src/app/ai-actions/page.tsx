@@ -51,6 +51,9 @@ export default function ActionsPage() {
         const tenantRes = await fetchTenantById(user.tenant_id);
         if (tenantRes.success) {
           finalTenants = [tenantRes.data];
+        } else if (user.role === 'user' && (tenantRes.error?.includes('403') || tenantRes.error?.includes('Forbidden'))) {
+          // Silent fallback for regular users to avoid 403 banners
+          finalTenants = [{ id: user.tenant_id, name: '' } as any];
         } else if (!res.success) {
            setError("Failed to fetch tenant info.");
         }
@@ -436,28 +439,6 @@ export default function ActionsPage() {
           </div>
         )}
 
-        {/* Empty State */}
-        {!loadingActions && selectedTenantId && !error && actions.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px", background: "rgba(99, 115, 171, 0.04)", borderRadius: 12, border: "1px dashed var(--border-color)" }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: 16,
-              background: "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(249,115,22,0.12))",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 16px", color: "#f59e0b"
-            }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-              </svg>
-            </div>
-            <h3 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 6px 0" }}>No Actions found</h3>
-            <p style={{ color: "var(--text-secondary)", margin: "0 0 20px 0", fontSize: 14 }}>
-              This tenant doesn&apos;t have any actions yet. Create one to automate AI responses.
-            </p>
-            <button className="btn-secondary" onClick={handleCreateNew}>
-              Add Action
-            </button>
-          </div>
-        )}
       </div>
 
       {isModalOpen && (

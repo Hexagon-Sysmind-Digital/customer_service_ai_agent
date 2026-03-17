@@ -56,6 +56,10 @@ export default function FaqsPage() {
         console.log('CLIENT DEBUG [fetchTenantById response]:', tenantRes);
         if (tenantRes.success) {
           finalTenants = [tenantRes.data];
+        } else if (user.role === 'user' && (tenantRes.error?.includes('403') || tenantRes.error?.includes('Forbidden'))) {
+          // Keep a minimal reference so the page can fetch data assigned to this tenant
+          finalTenants = [{ id: user.tenant_id, name: "Workspace" } as any];
+
         } else if (!res.success) {
            setError(`Failed to fetch tenant info: ${tenantRes.error}`);
         }

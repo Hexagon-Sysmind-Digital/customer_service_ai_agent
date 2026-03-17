@@ -9,6 +9,7 @@ import { BotIcon, UserIcon, FaqIcon, KnowledgeIcon, ActionIcon, CalendarIcon, Ch
 import { getMe } from "@/app/actions/auth";
 import { User } from "@/types";
 import { showToast, showConfirm } from "@/lib/swal";
+import InteractiveBackground from "./InteractiveBackground";
 
 
 export default function Sidebar({ children }: { children: React.ReactNode }) {
@@ -73,27 +74,29 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { label: "Tenants", path: "/tenants", icon: BotIcon },
-    { label: "Users", path: "/users", icon: UserIcon, role: ["admin", "owner"] },
+    { label: "Users", path: "/users", icon: UserIcon, hideForRole: ["user"] },
     { label: "FAQs", path: "/faqs", icon: FaqIcon },
     { label: "Knowledge", path: "/knowledge", icon: KnowledgeIcon },
     { label: "Actions", path: "/ai-actions", icon: ActionIcon },
     { label: "Templates", path: "/reservation-templates", icon: CalendarIcon },
     { label: "Reservations", path: "/reservations", icon: CalendarIcon },
     { label: "Chat", path: "/chat", icon: ChatIcon },
-    { label: "Credits", path: "/credits", icon: CreditCardIcon, role: ["admin", "owner"] },
-  ].filter(item => !item.role || (user && item.role.includes(user.role)));
+    { label: "Credits", path: "/credits", icon: CreditCardIcon, hideForRole: ["user"] },
+  ].filter(item => !item.hideForRole || (user && !item.hideForRole.includes(user.role)));
 
 
   const sidebarWidth = isCollapsed ? 80 : 260;
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      {/* Sidebar Aside */}
+    <>
+      <InteractiveBackground />
+      <div style={{ display: "flex", minHeight: "100vh" }}>
+        {/* Sidebar Aside */}
       <aside
+        className="sidebar-animated-bg"
         style={{
           width: sidebarWidth,
           flexShrink: 0,
-          background: "var(--card-bg)",
           borderRight: "1px solid var(--border-color)",
           display: "flex",
           flexDirection: "column",
@@ -103,7 +106,8 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
           padding: isCollapsed ? "24px 14px" : "24px 16px",
           transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease",
           zIndex: 100,
-          overflowX: "hidden"
+          overflowX: "hidden",
+          pointerEvents: "auto"
         }}
       >
         {/* Toggle Button Container - Refined Placement */}
@@ -297,11 +301,14 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
         minWidth: 0, 
         display: "flex", 
         flexDirection: "column",
-        transition: "margin 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+        transition: "margin 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        zIndex: 1,
+        position: "relative"
       }}>
         {children}
       </main>
     </div>
+    </>
   );
 }
 
