@@ -281,7 +281,7 @@ export default function ReservationTemplateModal({ template, tenantId, onClose, 
               id="tpl-name"
               type="text"
               className="form-input"
-              placeholder="e.g. Vet Appointment"
+              placeholder=""
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
@@ -348,7 +348,7 @@ export default function ReservationTemplateModal({ template, tenantId, onClose, 
               <input
                 type="text"
                 className="form-input"
-                placeholder="e.g. Dr. Cat Care"
+                placeholder=""
                 value={newResource}
                 onChange={(e) => setNewResource(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addResource(); } }}
@@ -377,7 +377,7 @@ export default function ReservationTemplateModal({ template, tenantId, onClose, 
               <input
                 type="text"
                 className="form-input"
-                placeholder="e.g. General Checkup"
+                placeholder=""
                 value={newService}
                 onChange={(e) => setNewService(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addService(); } }}
@@ -469,7 +469,7 @@ export default function ReservationTemplateModal({ template, tenantId, onClose, 
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="Key"
+                      placeholder=""
                       value={entry.key}
                       onChange={(e) => updateMetadataEntry(i, "key", e.target.value)}
                       style={{ flex: 1 }}
@@ -477,7 +477,7 @@ export default function ReservationTemplateModal({ template, tenantId, onClose, 
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="Value"
+                      placeholder=""
                       value={entry.value}
                       onChange={(e) => updateMetadataEntry(i, "value", e.target.value)}
                       style={{ flex: 1 }}

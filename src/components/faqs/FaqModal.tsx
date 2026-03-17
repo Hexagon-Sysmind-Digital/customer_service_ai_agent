@@ -149,7 +149,7 @@ export default function FaqModal({ faq, tenantId, onClose, onSuccess, onError }:
               id="question"
               type="text"
               className="form-input"
-              placeholder="e.g. What are your opening hours?"
+               placeholder=""
               value={formData.question}
               onChange={(e) => setFormData(prev => ({ ...prev, question: e.target.value }))}
               required
@@ -161,7 +161,7 @@ export default function FaqModal({ faq, tenantId, onClose, onSuccess, onError }:
             <textarea
               id="answer"
               className="form-input"
-              placeholder="e.g. We are open Mon-Fri 09:00-20:00 and Sat-Sun 10:00-17:00 🕐"
+               placeholder=""
               value={formData.answer}
               onChange={(e) => setFormData(prev => ({ ...prev, answer: e.target.value }))}
               required

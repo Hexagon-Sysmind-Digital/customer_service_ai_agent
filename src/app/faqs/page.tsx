@@ -1,14 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { fetchTenants } from "@/app/actions/tenants";
+import { fetchTenants, fetchTenantById } from "@/app/actions/tenants";
 import { fetchFaqs, deleteFaq } from "@/app/actions/faqs";
-import { Tenant, Faq } from "@/types";
+import { getMe } from "@/app/actions/auth";
+import { Tenant, Faq, User } from "@/types";
 import { PlusIcon, EditIcon, TrashIcon } from "@/components/icons";
 import FaqModal from "@/components/faqs/FaqModal";
+import SearchableSelect from "@/components/ui/SearchableSelect";
+import { showToast, showConfirm } from "@/lib/swal";
+
 
 export default function FaqsPage() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [faqs, setFaqs] = useState<Faq[]>([]);
   
@@ -18,28 +24,68 @@ export default function FaqsPage() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFaq, setSelectedFaq] = useState<Faq | null>(null);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const loadTenants = useCallback(async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       setLoadingTenants(true);
-      const res = await fetchTenants();
+      setError(null);
+
+      const userRes = await getMe();
+      if (!userRes.success) {
+        setError(`Failed to fetch user profile: ${userRes.error}`);
+        return;
+      }
+
+      
+      const user = userRes.data;
+      console.log('CLIENT DEBUG [user profile]:', user);
+      setCurrentUser(user);
+
+      // Fetch all tenants authorized for this user
+      console.log('CLIENT DEBUG: Calling fetchTenants for userId:', user.id);
+      const res = await fetchTenants(user.id);
+      console.log('CLIENT DEBUG [fetchTenants response]:', res);
+      
+      let finalTenants = [];
       if (res.success && res.data.length > 0) {
-        setTenants(res.data);
-        setSelectedTenantId(res.data[0].id); // Auto-select the first tenant
-      } else if (res.success) {
-        setTenants([]);
-      } else {
-        setError("Failed to fetch tenants.");
+        finalTenants = res.data;
+      } else if (user.tenant_id) {
+        // Fallback: fetch the single tenant they are explicitly assigned to
+        console.log('CLIENT DEBUG: fetchTenants failed or empty, falling back to fetchTenantById for:', user.tenant_id);
+        const tenantRes = await fetchTenantById(user.tenant_id);
+        console.log('CLIENT DEBUG [fetchTenantById response]:', tenantRes);
+        if (tenantRes.success) {
+          finalTenants = [tenantRes.data];
+        } else if (!res.success) {
+           setError(`Failed to fetch tenant info: ${tenantRes.error}`);
+        }
+      } else if (!res.success) {
+        setError(`Failed to fetch tenants: ${res.error}`);
+      }
+
+      setTenants(finalTenants);
+      console.log('CLIENT DEBUG [finalTenants]:', finalTenants);
+      if (finalTenants.length > 0) {
+        const storedId = sessionStorage.getItem("tenant_id");
+        console.log('CLIENT DEBUG [sessionStorage tenant_id]:', storedId);
+        if (storedId && finalTenants.some((t: Tenant) => t.id === storedId)) {
+          setSelectedTenantId(storedId);
+        } else {
+          const defaultId = finalTenants[0].id;
+          setSelectedTenantId(defaultId);
+          sessionStorage.setItem("tenant_id", defaultId);
+        }
       }
     } catch {
-      setError("Network error fetching tenants.");
+      setError("An unexpected error occurred.");
     } finally {
       setLoadingTenants(false);
     }
   }, []);
 
+
   const loadFaqs = useCallback(async (tenantId: string) => {
+    console.log('CLIENT DEBUG [loadFaqs]: Fetching for tenantId:', tenantId);
     if (!tenantId) return;
     try {
       setLoadingFaqs(true);
@@ -58,19 +104,19 @@ export default function FaqsPage() {
   }, []);
 
   useEffect(() => {
-    loadTenants();
-  }, [loadTenants]);
+    loadInitialData();
+  }, [loadInitialData]);
+
 
   useEffect(() => {
+    console.log('CLIENT DEBUG [selectedTenantId]:', selectedTenantId);
     if (selectedTenantId) {
       loadFaqs(selectedTenantId);
+      sessionStorage.setItem("tenant_id", selectedTenantId);
     }
   }, [selectedTenantId, loadFaqs]);
 
-  const showToast = (type: "success" | "error", message: string) => {
-    setToast({ type, message });
-    setTimeout(() => setToast(null), 3000);
-  };
+
 
   const handleCreateNew = () => {
     if (!selectedTenantId) {
@@ -87,7 +133,8 @@ export default function FaqsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this FAQ?")) return;
+    const result = await showConfirm("Are you sure?", "You want to delete this FAQ?");
+    if (!result.isConfirmed) return;
     if (!selectedTenantId) return;
 
     try {
@@ -130,30 +177,29 @@ export default function FaqsPage() {
               Manage Knowledge Base and Frequently Asked Questions
             </p>
           </div>
-          <button className="btn-primary" onClick={handleCreateNew} disabled={!selectedTenantId}>
-            <PlusIcon />
-            Add FAQ
-          </button>
+          {(currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
+            <button className="btn-primary" onClick={handleCreateNew} disabled={!selectedTenantId}>
+              <PlusIcon />
+              Add FAQ
+            </button>
+          )}
         </div>
 
+
         {/* Tenant Selector */}
-        {!loadingTenants && tenants.length > 0 && (
-          <div style={{ marginBottom: 32, padding: "16px 20px", background: "rgba(99, 115, 171, 0.04)", borderRadius: 12, border: "1px solid var(--border-color)", display: "flex", alignItems: "center", gap: 16 }}>
-            <label style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)" }}>
-              Select Tenant:
-            </label>
-            <select
-              className="form-input"
+        {!loadingTenants && tenants.length > 1 && (
+          <div style={{ marginBottom: 32, padding: "16px 20px", background: "rgba(99, 115, 171, 0.04)", borderRadius: 12, border: "1px solid var(--border-color)" }}>
+            <SearchableSelect
+              label="Select Tenant:"
+              options={tenants}
               value={selectedTenantId}
-              onChange={(e) => setSelectedTenantId(e.target.value)}
-              style={{ maxWidth: 300, background: "var(--background)", borderColor: "var(--card-border)" }}
-            >
-              {tenants.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
+              onSelect={setSelectedTenantId}
+              loading={loadingTenants}
+              style={{ flexDirection: "row", alignItems: "center", gap: 16 }}
+            />
           </div>
         )}
+
 
         {/* Error state */}
         {error && (
@@ -193,44 +239,47 @@ export default function FaqsPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {faqs.map(faq => (
               <div key={faq.id} className="glass-card" style={{ padding: 24, position: "relative" }}>
-                 <div style={{ position: "absolute", top: 20, right: 20, display: "flex", gap: 8 }}>
-                    <button
-                      onClick={() => handleEdit(faq)}
-                      style={{
-                        background: "rgba(99, 115, 171, 0.08)",
-                        border: "none",
-                        color: "var(--text-tertiary)",
-                        padding: 6,
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        display: "flex",
-                        transition: "all 0.2s"
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-primary)"; e.currentTarget.style.background = "var(--accent-primary-bg)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
-                      title="Edit FAQ"
-                    >
-                      <EditIcon />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(faq.id)}
-                      style={{
-                        background: "rgba(99, 115, 171, 0.08)",
-                        border: "none",
-                        color: "var(--text-tertiary)",
-                        padding: 6,
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        display: "flex",
-                        transition: "all 0.2s"
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-red)"; e.currentTarget.style.background = "var(--accent-red-bg)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
-                      title="Delete FAQ"
-                    >
-                      <TrashIcon />
-                    </button>
-                 </div>
+                  {(currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
+                   <div style={{ position: "absolute", top: 20, right: 20, display: "flex", gap: 8 }}>
+                      <button
+                        onClick={() => handleEdit(faq)}
+                        style={{
+                          background: "rgba(99, 115, 171, 0.08)",
+                          border: "none",
+                          color: "var(--text-tertiary)",
+                          padding: 6,
+                          borderRadius: 6,
+                          cursor: "pointer",
+                          display: "flex",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-primary)"; e.currentTarget.style.background = "var(--accent-primary-bg)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
+                        title="Edit FAQ"
+                      >
+                        <EditIcon />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(faq.id)}
+                        style={{
+                          background: "rgba(99, 115, 171, 0.08)",
+                          border: "none",
+                          color: "var(--text-tertiary)",
+                          padding: 6,
+                          borderRadius: 6,
+                          cursor: "pointer",
+                          display: "flex",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-red)"; e.currentTarget.style.background = "var(--accent-red-bg)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
+                        title="Delete FAQ"
+                      >
+                        <TrashIcon />
+                      </button>
+                   </div>
+                 )}
+
 
                  <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingRight: 80 }}>
                     <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--foreground)", margin: 0, lineHeight: 1.4 }}>
@@ -294,12 +343,7 @@ export default function FaqsPage() {
         />
       )}
 
-      {/* Toast */}
-      {toast && (
-         <div className={`toast ${toast.type === "success" ? "toast-success" : "toast-error"}`}>
-         {toast.type === "success" ? "✓" : "✕"} {toast.message}
-       </div>
-      )}
+
     </div>
   );
 }

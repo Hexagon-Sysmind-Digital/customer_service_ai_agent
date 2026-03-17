@@ -131,7 +131,7 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
             <input
               className="input-field"
               type="text"
-              placeholder="e.g. PetCare Berlin"
+              placeholder=""
               value={form.name}
               onChange={(e) => updateField("name", e.target.value)}
               required
@@ -220,7 +220,7 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
             <input
               className="input-field"
               type="text"
-              placeholder="Hello! Welcome to our service 🎉"
+              placeholder=""
               value={form.welcome_message}
               onChange={(e) => updateField("welcome_message", e.target.value)}
             />
@@ -231,7 +231,7 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
             <label style={labelStyle}>System Prompt</label>
             <textarea
               className="input-field"
-              placeholder="You are an AI assistant for..."
+              placeholder=""
               value={form.system_prompt}
               onChange={(e) => updateField("system_prompt", e.target.value)}
               rows={3}
@@ -248,7 +248,7 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
                 min="0"
                 max="1"
                 step="0.01"
-                placeholder="0.8"
+                placeholder=""
                 value={form.faq_threshold}
                 onChange={(e) => updateField("faq_threshold", parseFloat(e.target.value) || 0)}
               />
@@ -261,7 +261,7 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
                 min="0"
                 max="1"
                 step="0.01"
-                placeholder="0.5"
+                placeholder=""
                 value={form.fallback_threshold}
                 onChange={(e) => updateField("fallback_threshold", parseFloat(e.target.value) || 0)}
               />
@@ -282,7 +282,7 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
               <input
                 className="input-field"
                 type="url"
-                placeholder="https://..."
+                placeholder=""
                 value={form.cs_webhook_url}
                 onChange={(e) => updateField("cs_webhook_url", e.target.value)}
               />

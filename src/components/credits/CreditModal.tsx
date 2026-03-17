@@ -3,6 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Credit } from "@/types";
 import { createCredit, updateCreditStatus } from "@/app/actions/credits";
+import { fetchTenants } from "@/app/actions/tenants";
+import { fetchUsers } from "@/app/actions/users";
+import { Tenant, User } from "@/types";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 interface CreditModalProps {
   credit?: Credit | null;
@@ -17,6 +21,12 @@ export default function CreditModal({ credit, isAdmin, onClose, onSuccess, onErr
   const [status, setStatus] = useState(credit?.status || "unpaid");
   const modalRef = useRef<HTMLDivElement>(null);
 
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState("");
+
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -24,6 +34,35 @@ export default function CreditModal({ credit, isAdmin, onClose, onSuccess, onErr
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
   }, [onClose]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [tenantRes, userRes] = await Promise.all([
+          fetchTenants(),
+          fetchUsers()
+        ]);
+
+        if (tenantRes.success) setTenants(tenantRes.data);
+        if (userRes.success) setUsers(userRes.data);
+      } catch (err) {
+        console.error("Failed to load data for selectors", err);
+      }
+    };
+    if (isAdmin && !credit) {
+      loadData();
+    }
+  }, [isAdmin, credit]);
+
+  useEffect(() => {
+    if (selectedTenantId) {
+      const tenantUsers = users.filter(u => u.tenant_id === selectedTenantId);
+      setFilteredUsers(tenantUsers);
+      setSelectedUserId(""); // Reset user when tenant changes
+    } else {
+      setFilteredUsers([]);
+    }
+  }, [selectedTenantId, users]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -58,6 +97,7 @@ export default function CreditModal({ credit, isAdmin, onClose, onSuccess, onErr
 
   const isEditing = !!credit;
 
+
   return (
     <div style={{
       position: "fixed",
@@ -75,7 +115,7 @@ export default function CreditModal({ credit, isAdmin, onClose, onSuccess, onErr
         className="glass-card" 
         style={{
           width: "100%",
-          maxWidth: "500px",
+          maxWidth: "540px",
           maxHeight: "90vh",
           overflowY: "auto",
           padding: "32px",
@@ -119,31 +159,34 @@ export default function CreditModal({ credit, isAdmin, onClose, onSuccess, onErr
             {isEditing ? `Edit Credit ${isAdmin ? '(Status Only)' : ''}`  : "Create New Credit"}
           </h2>
           <p style={{ color: "var(--text-secondary)", fontSize: "14px", margin: 0 }}>
-            {isEditing ? "Update the payment status" : "Fill out the details below to create a new credit record"}
+            {isEditing ? "Update the payment status" : "Select tenant and fill details below"}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
            {!isEditing && isAdmin && (
-            <div style={{ display: "flex", gap: "16px" }}>
-              <div style={{ flex: 1 }}>
-                <label className="form-label">User ID <span style={{color: "var(--accent-red)"}}>*</span></label>
-                <input
-                  name="user_id"
-                  className="form-input"
-                  required
-                  placeholder="Enter user ID"
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                 <label className="form-label">Tenant ID <span style={{color: "var(--accent-red)"}}>*</span></label>
-                 <input
-                  name="tenant_id"
-                  className="form-input"
-                  required
-                  placeholder="Enter tenant ID"
-                />
-              </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <input type="hidden" name="tenant_id" value={selectedTenantId} />
+              <SearchableSelect
+                label={<>Tenant <span style={{color: "var(--accent-red)"}}>*</span></> as any}
+                options={tenants}
+                value={selectedTenantId}
+                onSelect={setSelectedTenantId}
+                placeholder="Search tenant..."
+                searchPlaceholder="Search tenants..."
+              />
+
+              <input type="hidden" name="user_id" value={selectedUserId} />
+              <SearchableSelect
+                label={<>User <span style={{color: "var(--accent-red)"}}>*</span></> as any}
+                options={filteredUsers.map(u => ({ id: u.id, name: `${u.name} (${u.email})` }))}
+                value={selectedUserId}
+                onSelect={setSelectedUserId}
+                placeholder={selectedTenantId ? "Search user..." : "Select tenant first"}
+                searchPlaceholder="Search users..."
+                loading={!tenants.length && !users.length}
+                disabled={!selectedTenantId}
+              />
             </div>
           )}
 
@@ -157,8 +200,7 @@ export default function CreditModal({ credit, isAdmin, onClose, onSuccess, onErr
                     min="0"
                     className="form-input"
                     required
-                    placeholder="e.g. 150000"
-                    defaultValue={150000}
+                    placeholder=""
                   />
                 </div>
 
@@ -221,7 +263,7 @@ export default function CreditModal({ credit, isAdmin, onClose, onSuccess, onErr
                 <textarea
                   name="notes"
                   className="form-input"
-                  placeholder="e.g. Paket Bulanan Maret 2026"
+                   placeholder=""
                   rows={2}
                 />
               </div>

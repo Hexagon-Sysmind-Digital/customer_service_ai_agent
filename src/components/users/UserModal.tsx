@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createUser, updateUser } from "@/app/actions/users";
+import { fetchTenants } from "@/app/actions/tenants";
 
-import { User } from "@/types";
+import { User, Tenant } from "@/types";
 import { CloseIcon } from "@/components/icons";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 interface UserModalProps {
   user?: User | null;
@@ -12,8 +14,6 @@ interface UserModalProps {
   onSuccess: () => void;
   onError: (msg: string) => void;
 }
-
-
 
 export default function UserModal({ user, onClose, onSuccess, onError }: UserModalProps) {
   const [loading, setLoading] = useState(false);
@@ -26,6 +26,19 @@ export default function UserModal({ user, onClose, onSuccess, onError }: UserMod
     role: user?.role || "user",
     tenant_id: user?.tenant_id || "",
   });
+
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+
+  useEffect(() => {
+    const loadTenants = async () => {
+      const res = await fetchTenants();
+      if (res.success) {
+        setTenants(res.data);
+      }
+    };
+    loadTenants();
+  }, []);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +174,7 @@ export default function UserModal({ user, onClose, onSuccess, onError }: UserMod
                 id="name"
                 type="text"
                 className="form-input"
-                placeholder="John Doe"
+                placeholder=""
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 required
@@ -173,7 +186,7 @@ export default function UserModal({ user, onClose, onSuccess, onError }: UserMod
                 id="email"
                 type="email"
                 className="form-input"
-                placeholder="john@example.com"
+                placeholder=""
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 required
@@ -213,7 +226,7 @@ export default function UserModal({ user, onClose, onSuccess, onError }: UserMod
                 id="password"
                 type="password"
                 className="form-input"
-                placeholder="••••••••"
+                placeholder=""
                 value={formData.password}
                 onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                 required={!isEditing}
@@ -222,18 +235,18 @@ export default function UserModal({ user, onClose, onSuccess, onError }: UserMod
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="tenant_id">
-              Tenant ID
-              {isEditing && <span style={{ color: "var(--accent-red)", marginLeft: 4 }}>*</span>}
-            </label>
-            <input
-              id="tenant_id"
-              type="text"
-              className="form-input"
-              placeholder="e.g. 1a2b3c4d-..."
+            <SearchableSelect
+              label={
+                <>
+                  Tenant
+                  {isEditing && <span style={{ color: "var(--accent-red)", marginLeft: 4 }}>*</span>}
+                </> as any
+              }
+              options={tenants}
               value={formData.tenant_id}
-              onChange={(e) => setFormData(prev => ({ ...prev, tenant_id: e.target.value }))}
-              required={isEditing}
+              onSelect={(id) => setFormData(prev => ({ ...prev, tenant_id: id }))}
+              placeholder="Select tenant..."
+              searchPlaceholder="Search tenants..."
             />
             {isEditing && (
               <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "4px 0 0 0" }}>

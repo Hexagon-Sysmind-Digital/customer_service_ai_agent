@@ -1,6 +1,8 @@
 'use server'
 
 import { cookies } from 'next/headers'
+ 
+const API_BASE = 'https://triad.my.id/api/v1'
 
 export async function login(formData: FormData) {
   const email = formData.get('email')
@@ -37,8 +39,51 @@ export async function login(formData: FormData) {
         sameSite: 'lax',
       })
 
-      return { success: true }
+      // Store user info in non-http-only cookies for quick access (if present in login response)
+      const user = data.data.user;
+      const apiKey = data.data.api_key;
+      
+      if (user) {
+        cookieStore.set('user_id', user.id || user.user_id || '', { path: '/' });
+        cookieStore.set('user_role', user.role || 'user', { path: '/' });
+        cookieStore.set('user_tenant', user.tenant_id || apiKey || '', { path: '/' });
+        cookieStore.set('user_name', user.name || '', { path: '/' });
+        if (apiKey) {
+          cookieStore.set('api_key', apiKey, { path: '/' });
+        }
+      } else {
+         // Try to decode JWT if user info is not explicitly provided
+         try {
+           const parts = data.data.token.split('.');
+           if (parts.length === 3) {
+             const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+             cookieStore.set('user_id', payload.sub || payload.id || payload.user_id || '', { path: '/' });
+             cookieStore.set('user_role', payload.role || 'user', { path: '/' });
+             cookieStore.set('user_tenant', payload.tenant_id || payload.tid || '', { path: '/' });
+             cookieStore.set('user_name', payload.name || payload.email || '', { path: '/' });
+           }
+         } catch (e) {
+           console.error('Failed to decode token on login:', e);
+         }
+      }
+
+      return { 
+        success: true, 
+        token: data.data.token,
+        api_key: apiKey,
+        user: user ? {
+          ...user,
+          tenant_id: user.tenant_id || apiKey // Fallback to api_key as tenant_id for convenience
+        } : {
+          id: cookieStore.get('user_id')?.value,
+          role: cookieStore.get('user_role')?.value,
+          tenant_id: cookieStore.get('user_tenant')?.value,
+          name: cookieStore.get('user_name')?.value,
+          api_key: cookieStore.get('api_key')?.value,
+        } 
+      }
     } else {
+
       return { success: false, error: 'Invalid response from server' }
     }
   } catch (error) {
@@ -52,3 +97,78 @@ export async function logout() {
   cookieStore.delete('auth_token')
   return { success: true }
 }
+
+export async function getMe() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('auth_token')?.value
+
+  if (!token) return { success: false, error: 'Unauthorized' }
+
+  // Check if we already have user info in cookies (avoiding 403 API call)
+  const userId = cookieStore.get('user_id')?.value;
+  const userRole = cookieStore.get('user_role')?.value;
+  const userTenant = cookieStore.get('user_tenant')?.value;
+  const userName = cookieStore.get('user_name')?.value;
+
+  if (userId && userRole) {
+    return {
+      success: true,
+      data: {
+        id: userId,
+        role: userRole,
+        tenant_id: userTenant,
+        name: userName || 'User',
+        api_key: cookieStore.get('api_key')?.value || userTenant, // Fallback if needed
+      }
+    };
+  }
+
+  // Fallback to API if cookie info is missing
+  try {
+    const res = await fetch(`${API_BASE}/users/me`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    // If forbidden, try decoding token (it might be a JWT)
+    if (res.status === 403) {
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+          return {
+            success: true,
+            data: {
+              id: payload.sub || payload.id || payload.user_id,
+              name: payload.name || payload.email || 'User',
+              role: payload.role || 'user',
+              tenant_id: payload.tenant_id || payload.tid || null,
+            }
+          };
+        }
+      } catch (e) {
+        console.error('Failed to decode token fallback:', e);
+      }
+      return { success: false, error: 'Forbidden (403). Profile is restricted.' }
+    }
+
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      return { success: false, error: `Invalid JSON response (${res.status})` }
+    }
+
+    if (!res.ok) return { success: false, error: data.message || `API Error (${res.status})` }
+    return { success: true, data: data.data }
+  } catch (err) {
+    return { success: false, error: 'Network error' }
+  }
+}
+
+
+
+

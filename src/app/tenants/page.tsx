@@ -5,11 +5,17 @@ import TenantModal from "@/components/tenants/TenantModal";
 import { Tenant } from "@/types";
 import { maskApiKey, formatDate } from "@/lib/utils";
 import { CopyIcon, CheckIcon, PlusIcon, BotIcon, EditIcon, TrashIcon } from "@/components/icons";
-import { fetchTenants, deleteTenant } from "@/app/actions/tenants";
+import { fetchTenants, fetchTenantById, deleteTenant } from "@/app/actions/tenants";
+import { getMe } from "@/app/actions/auth";
+import { User } from "@/types";
+import { showToast, showConfirm } from "@/lib/swal";
 
 
-function TenantCard({ tenant, onEdit, onDelete }: { tenant: Tenant, onEdit: (t: Tenant) => void, onDelete: (id: string) => void }) {
+
+
+function TenantCard({ tenant, onEdit, onDelete, currentUser }: { tenant: Tenant, onEdit: (t: Tenant) => void, onDelete: (id: string) => void, currentUser: User | null }) {
   const [copied, setCopied] = useState(false);
+  const canManage = currentUser?.role === "admin" || currentUser?.role === "owner";
 
   const handleCopy = async () => {
     try {
@@ -24,44 +30,47 @@ function TenantCard({ tenant, onEdit, onDelete }: { tenant: Tenant, onEdit: (t: 
   return (
     <div className="glass-card p-6 flex flex-col gap-4" style={{ position: "relative" }}>
       {/* Edit/Delete Actions */}
-      <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 6 }}>
-         <button
-            onClick={() => onEdit(tenant)}
-            style={{
-              background: "rgba(99, 115, 171, 0.08)",
-              border: "none",
-              color: "var(--text-tertiary)",
-              padding: 6,
-              borderRadius: 6,
-              cursor: "pointer",
-              display: "flex",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-primary)"; e.currentTarget.style.background = "var(--accent-primary-bg)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
-            title="Edit Tenant"
-          >
-            <EditIcon />
-          </button>
+      {canManage && (
+        <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 6 }}>
           <button
-            onClick={() => onDelete(tenant.id)}
-            style={{
-              background: "rgba(99, 115, 171, 0.08)",
-              border: "none",
-              color: "var(--text-tertiary)",
-              padding: 6,
-              borderRadius: 6,
-              cursor: "pointer",
-              display: "flex",
-              transition: "all 0.2s"
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-red)"; e.currentTarget.style.background = "var(--accent-red-bg)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
-            title="Delete Tenant"
-          >
-            <TrashIcon />
-          </button>
-      </div>
+              onClick={() => onEdit(tenant)}
+              style={{
+                background: "rgba(99, 115, 171, 0.08)",
+                border: "none",
+                color: "var(--text-tertiary)",
+                padding: 6,
+                borderRadius: 6,
+                cursor: "pointer",
+                display: "flex",
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-primary)"; e.currentTarget.style.background = "var(--accent-primary-bg)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
+              title="Edit Tenant"
+            >
+              <EditIcon />
+            </button>
+            <button
+              onClick={() => onDelete(tenant.id)}
+              style={{
+                background: "rgba(99, 115, 171, 0.08)",
+                border: "none",
+                color: "var(--text-tertiary)",
+                padding: 6,
+                borderRadius: 6,
+                cursor: "pointer",
+                display: "flex",
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-red)"; e.currentTarget.style.background = "var(--accent-red-bg)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
+              title="Delete Tenant"
+            >
+              <TrashIcon />
+            </button>
+        </div>
+      )}
+
 
       {/* Header */}
       <div className="flex items-start justify-between" style={{ paddingRight: 60 }}>
@@ -148,7 +157,7 @@ function TenantCard({ tenant, onEdit, onDelete }: { tenant: Tenant, onEdit: (t: 
             Max Requests
           </p>
           <p style={{ color: "var(--foreground)", margin: 0, fontWeight: 500 }}>
-            {tenant.max_requests_per_day.toLocaleString()}/day
+            {(tenant.max_requests_per_day ?? 0).toLocaleString()}/day
           </p>
         </div>
         <div>
@@ -232,33 +241,66 @@ export default function TenantsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const loadTenants = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetchTenants();
-      if (res.success) {
-        setTenants(res.data);
-      } else {
-        throw new Error(res.error || "Failed to fetch tenants");
+      
+      const userRes = await getMe();
+      if (!userRes.success) {
+        setError(`Failed to fetch user profile: ${userRes.error}`);
+        return;
       }
+
+
+      const user = userRes.data;
+      setCurrentUser(user);
+
+      let finalTenants = [];
+
+      if (user.role === "user" && user.tenant_id) {
+        // PER REQUEST: Fetch specific tenant for non-admin user
+        const tenantRes = await fetchTenantById(user.tenant_id);
+        if (tenantRes.success) {
+          finalTenants = [tenantRes.data];
+        } else {
+          setError(tenantRes.error || "Failed to fetch your tenant.");
+        }
+      } else {
+        // Admin/Owner: Fetch all authorized tenants
+        const res = await fetchTenants(user.id);
+        if (res.success && res.data.length > 0) {
+          finalTenants = res.data;
+        } else if (user.tenant_id) {
+          // Fallback if the list call returns nothing but they have a specific ID
+          const tenantRes = await fetchTenantById(user.tenant_id);
+          if (tenantRes.success) {
+            finalTenants = [tenantRes.data];
+          } else if (!res.success) {
+            setError(tenantRes.error || "Failed to fetch tenant info.");
+          }
+        } else if (!res.success) {
+          setError(res.error || "Failed to fetch tenants.");
+        }
+      }
+
+      setTenants(finalTenants);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch tenants");
+      setError("An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadTenants();
-  }, [loadTenants]);
 
-  const showToast = (type: "success" | "error", message: string) => {
-    setToast({ type, message });
-    setTimeout(() => setToast(null), 3000);
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+
+
 
   const handleCreateNew = () => {
     setSelectedTenant(null);
@@ -271,13 +313,14 @@ export default function TenantsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this tenant?")) return;
+    const result = await showConfirm("Are you sure?", "You want to delete this tenant?");
+    if (!result.isConfirmed) return;
 
     try {
       const res = await deleteTenant(id);
       if (res.success) {
         showToast("success", "Tenant deleted successfully");
-        loadTenants();
+        loadData();
       } else {
         showToast("error", res.error || "Failed to delete tenant");
       }
@@ -289,8 +332,9 @@ export default function TenantsPage() {
   const handleModalSuccess = () => {
     setIsModalOpen(false);
     showToast("success", `Tenant successfully ${selectedTenant ? "updated" : "created"}`);
-    loadTenants();
+    loadData();
   };
+
 
   return (
     <div style={{ minHeight: "100vh", padding: "32px 24px" }}>
@@ -313,10 +357,12 @@ export default function TenantsPage() {
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button className="btn-primary" onClick={handleCreateNew}>
-              <PlusIcon />
-              Add Tenant
-            </button>
+            {(currentUser?.role === "admin" || currentUser?.role === "owner") && (
+              <button className="btn-primary" onClick={handleCreateNew}>
+                <PlusIcon />
+                Add Tenant
+              </button>
+            )}
           </div>
         </div>
 
@@ -337,11 +383,12 @@ export default function TenantsPage() {
             }}
           >
             <span>⚠️ {error}</span>
-            <button className="btn-secondary" style={{ padding: "6px 14px", fontSize: 13 }} onClick={loadTenants}>
+            <button className="btn-secondary" style={{ padding: "6px 14px", fontSize: 13 }} onClick={loadData}>
               Retry
             </button>
           </div>
         )}
+
 
         {/* Grid */}
         <div
@@ -359,9 +406,11 @@ export default function TenantsPage() {
                  tenant={tenant} 
                  onEdit={handleEdit} 
                  onDelete={handleDelete} 
+                 currentUser={currentUser}
                />
             ))
           }
+
         </div>
 
         {/* Empty state */}
@@ -409,12 +458,7 @@ export default function TenantsPage() {
         />
       )}
 
-      {/* Toast */}
-      {toast && (
-        <div className={`toast ${toast.type === "success" ? "toast-success" : "toast-error"}`}>
-          {toast.type === "success" ? "✓" : "✕"} {toast.message}
-        </div>
-      )}
+
     </div>
   );
 }

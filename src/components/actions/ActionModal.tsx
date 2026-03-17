@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Action } from "@/types";
+import { useState, useEffect } from "react";
+import { Action, ReservationTemplate } from "@/types";
 import { createAction, updateAction } from "@/app/actions/actionsApi";
+import { fetchReservationTemplates } from "@/app/actions/reservationTemplatesApi";
 import { CloseIcon } from "@/components/icons";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 interface ActionModalProps {
   action?: Action | null;
@@ -26,6 +28,19 @@ export default function ActionModal({ action, tenantId, onClose, onSuccess, onEr
     api_method: action?.api_method || "GET",
     template_id: action?.template_id || "",
   });
+
+  const [templates, setTemplates] = useState<ReservationTemplate[]>([]);
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      if (!tenantId) return;
+      const res = await fetchReservationTemplates(tenantId);
+      if (res.success) {
+        setTemplates(res.data);
+      }
+    };
+    loadTemplates();
+  }, [tenantId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,7 +178,7 @@ export default function ActionModal({ action, tenantId, onClose, onSuccess, onEr
               id="action-name"
               type="text"
               className="form-input"
-              placeholder="e.g. check_schedule"
+              placeholder=""
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
@@ -175,7 +190,7 @@ export default function ActionModal({ action, tenantId, onClose, onSuccess, onEr
             <textarea
               id="action-description"
               className="form-input"
-              placeholder="e.g. Check available schedule via external API"
+              placeholder=""
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               required
@@ -189,7 +204,7 @@ export default function ActionModal({ action, tenantId, onClose, onSuccess, onEr
               id="action-keywords"
               type="text"
               className="form-input"
-              placeholder="e.g. schedule, available, check time"
+              placeholder=""
               value={formData.keyword_pattern}
               onChange={(e) => setFormData(prev => ({ ...prev, keyword_pattern: e.target.value }))}
               required
@@ -200,22 +215,16 @@ export default function ActionModal({ action, tenantId, onClose, onSuccess, onEr
           </div>
 
           <div className="form-group">
-            <label className="form-label">Action Type</label>
-            <div className="chip-grid">
-              {[
-                { value: "webhook", label: "Webhook", active: "active-blue" },
-                { value: "reservation", label: "Reservation", active: "active-purple" },
-              ].map((t) => (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, action_type: t.value }))}
-                  className={`chip-button ${formData.action_type === t.value ? t.active : ""}`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+            <SearchableSelect
+              label="Action Type"
+              options={[
+                { id: "webhook", name: "Webhook" },
+                { id: "reservation", name: "Reservation" },
+              ]}
+              value={formData.action_type}
+              onSelect={(val) => setFormData(prev => ({ ...prev, action_type: val as any }))}
+              placeholder="Select action type..."
+            />
           </div>
 
           {/* Conditional: Webhook fields */}
@@ -227,31 +236,25 @@ export default function ActionModal({ action, tenantId, onClose, onSuccess, onEr
                   id="action-endpoint"
                   type="url"
                   className="form-input"
-                  placeholder="https://api.example.com/schedule/check"
+                   placeholder=""
                   value={formData.api_endpoint}
                   onChange={(e) => setFormData(prev => ({ ...prev, api_endpoint: e.target.value }))}
                   required
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">API Method</label>
-                <div className="chip-grid">
-                  {[
-                    { value: "GET", label: "GET", active: "active-blue" },
-                    { value: "POST", label: "POST", active: "active-purple" },
-                    { value: "PUT", label: "PUT", active: "active-orange" },
-                    { value: "DELETE", label: "DELETE", active: "active-red" },
-                  ].map((m) => (
-                    <button
-                      key={m.value}
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, api_method: m.value }))}
-                      className={`chip-button ${formData.api_method === m.value ? m.active : ""}`}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
+                <SearchableSelect
+                  label="API Method"
+                  options={[
+                    { id: "GET", name: "GET" },
+                    { id: "POST", name: "POST" },
+                    { id: "PUT", name: "PUT" },
+                    { id: "DELETE", name: "DELETE" },
+                  ]}
+                  value={formData.api_method}
+                  onSelect={(val) => setFormData(prev => ({ ...prev, api_method: val }))}
+                  placeholder="Select API method..."
+                />
               </div>
             </>
           )}
@@ -259,15 +262,13 @@ export default function ActionModal({ action, tenantId, onClose, onSuccess, onEr
           {/* Conditional: Reservation field */}
           {formData.action_type === "reservation" && (
             <div className="form-group">
-              <label className="form-label" htmlFor="action-template">Template ID</label>
-              <input
-                id="action-template"
-                type="text"
-                className="form-input"
-                placeholder="Enter the template ID"
+              <SearchableSelect
+                label="Reservation Template *"
+                options={templates}
                 value={formData.template_id}
-                onChange={(e) => setFormData(prev => ({ ...prev, template_id: e.target.value }))}
-                required
+                onSelect={(id) => setFormData(prev => ({ ...prev, template_id: id }))}
+                placeholder="Select a template..."
+                searchPlaceholder="Search templates..."
               />
             </div>
           )}

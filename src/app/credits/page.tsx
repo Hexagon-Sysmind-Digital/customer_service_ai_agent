@@ -3,8 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import CreditModal from "@/components/credits/CreditModal";
 import { fetchCredits, deleteCredit, sendReminders, fetchPaymentStatus } from "@/app/actions/credits";
-import { Credit, PaymentStatus } from "@/types";
+import { getMe } from "@/app/actions/auth";
+import { Credit, PaymentStatus, User } from "@/types";
 import { PlusIcon, EditIcon, TrashIcon } from "@/components/icons";
+import { notFound } from "next/navigation";
+import { showToast, showConfirm } from "@/lib/swal";
+
+
 
 function SkeletonRow() {
   return (
@@ -27,53 +32,74 @@ export default function CreditsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCredit, setSelectedCredit] = useState<Credit | null>(null);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   
-  // Based on actual user role fetching from context/API if possible, here using a state to determine UI variant.
-  // Assuming a generic approach where admin toggle might be needed, but strictly we should check the token/user role.
-  // For demonstration, let's assume we read role from somewhere, or fetch it. For now, true = Admin, false = User.
-  const [isAdmin, setIsAdmin] = useState(true); // TODO: Replace with actual auth mechanism if available contextually
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
-  const loadCredits = useCallback(async () => {
+
+  const loadInitialData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetchCredits();
-      if (res.success) {
-        setCredits(res.data);
-      } else {
-        throw new Error(res.error || "Failed to fetch credits");
+
+      const userRes = await getMe();
+      if (!userRes.success) {
+        setError(`Failed to fetch user profile: ${userRes.error}`);
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
+
+      
+      const user = userRes.data;
+      setCurrentUser(user);
+      
+      if (user.role === "user") {
+        setAccessDenied(true);
+        return;
+      }
+      
+      const isPrivileged = user.role === "admin" || user.role === "owner";
+      setIsAdmin(isPrivileged);
+
+      // Fetch credits and status
+      const [creditsRes, statusRes] = await Promise.all([
+        fetchCredits(),
+        fetchPaymentStatus(isPrivileged ? undefined : user.id)
+      ]);
+
+      if (creditsRes.success) {
+        let fetchedCredits = creditsRes.data;
+        // Filter by user_id if not admin/owner
+        if (!isPrivileged) {
+          fetchedCredits = fetchedCredits.filter((c: Credit) => c.user_id === user.id);
+        }
+        setCredits(fetchedCredits);
+      } else {
+        setError(creditsRes.error || "Failed to fetch credits");
+      }
+
+      if (statusRes.success) {
+        setPaymentStatus(statusRes.data as PaymentStatus);
+      }
+
+    } catch {
+      setError("An unexpected error occurred.");
     } finally {
       setLoading(false);
-    }
-  }, []);
-
-  const loadPaymentStatus = useCallback(async () => {
-    try {
-      setStatusLoading(true);
-      const res = await fetchPaymentStatus(); // If admin wants specific user, pass userId
-      if (res.success) {
-        setPaymentStatus(res.data as PaymentStatus);
-      }
-    } catch (err) {
-      console.error("Failed to load payment status", err);
-    } finally {
       setStatusLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadCredits();
-    loadPaymentStatus();
-  }, [loadCredits, loadPaymentStatus]);
+  if (accessDenied) {
+    return notFound();
+  }
 
-  const showToast = (type: "success" | "error", message: string) => {
-    setToast({ type, message });
-    setTimeout(() => setToast(null), 3000);
-  };
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+
+
 
   const handleCreateNew = () => {
     setSelectedCredit(null);
@@ -86,15 +112,16 @@ export default function CreditsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this credit?")) return;
+    const result = await showConfirm("Are you sure?", "You want to delete this credit?");
+    if (!result.isConfirmed) return;
 
     try {
       const res = await deleteCredit(id);
       if (res.success) {
         showToast("success", "Credit deleted successfully");
-        loadCredits();
-        loadPaymentStatus();
+        loadInitialData();
       } else {
+
         showToast("error", res.error || "Failed to delete credit");
       }
     } catch (err) {
@@ -118,9 +145,9 @@ export default function CreditsPage() {
   const handleModalSuccess = () => {
     setIsModalOpen(false);
     showToast("success", `Credit successfully ${selectedCredit ? "updated" : "created"}`);
-    loadCredits();
-    loadPaymentStatus();
+    loadInitialData();
   };
+
 
   return (
     <div style={{ minHeight: "100vh", padding: "32px 24px" }}>
@@ -139,30 +166,25 @@ export default function CreditsPage() {
                 </span>
               )}
             </div>
-             <div style={{display: "flex", alignItems: "center", gap: "10px", marginTop: "10px"}}>
-               <label style={{ fontSize: 14 }}>View as Admin (Demo Toggle):</label>
-               <input 
-                 type="checkbox" 
-                 checked={isAdmin} 
-                 onChange={(e) => setIsAdmin(e.target.checked)} 
-                 title="Toggle to test Admin vs User views"
-               />
-            </div>
             <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: 0, marginTop: "8px" }}>
               Manage subscription credits and payment statuses
             </p>
           </div>
+
           <div style={{ display: "flex", gap: "12px" }}>
              {isAdmin && (
-                <button className="btn-secondary" onClick={handleSendReminders}>
-                  Send Reminders
-                </button>
+                <>
+                  <button className="btn-secondary" onClick={handleSendReminders}>
+                    Send Reminders
+                  </button>
+                  <button className="btn-primary" onClick={handleCreateNew}>
+                    <PlusIcon />
+                    Add Credit
+                  </button>
+                </>
              )}
-            <button className="btn-primary" onClick={handleCreateNew}>
-              <PlusIcon />
-              Add Credit
-            </button>
           </div>
+
         </div>
 
         {/* Payment Status Cards */}
@@ -210,10 +232,11 @@ export default function CreditsPage() {
             fontSize: 14,
           }}>
             <span>⚠️ {error}</span>
-            <button className="btn-secondary" style={{ padding: "6px 14px", fontSize: 13 }} onClick={() => { loadCredits(); loadPaymentStatus(); }}>
+            <button className="btn-secondary" style={{ padding: "6px 14px", fontSize: 13 }} onClick={() => { loadInitialData(); }}>
               Retry
             </button>
           </div>
+
         )}
 
         {/* Credits Table / List */}
@@ -277,41 +300,46 @@ export default function CreditsPage() {
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                    <button
-                      onClick={() => handleEdit(credit)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "var(--text-tertiary)",
-                        padding: 6,
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        display: "flex"
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-primary)"; e.currentTarget.style.background = "var(--accent-primary-bg)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "transparent"; }}
-                      title="Edit Status"
-                    >
-                      <EditIcon />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(credit.id)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "var(--text-tertiary)",
-                        padding: 6,
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        display: "flex"
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-red)"; e.currentTarget.style.background = "var(--accent-red-bg)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "transparent"; }}
-                      title="Delete Credit"
-                    >
-                      <TrashIcon />
-                    </button>
+                    {isAdmin && (
+                      <>
+                        <button
+                          onClick={() => handleEdit(credit)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "var(--text-tertiary)",
+                            padding: 6,
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            display: "flex"
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-primary)"; e.currentTarget.style.background = "var(--accent-primary-bg)"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "transparent"; }}
+                          title="Edit Status"
+                        >
+                          <EditIcon />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(credit.id)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "var(--text-tertiary)",
+                            padding: 6,
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            display: "flex"
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-red)"; e.currentTarget.style.background = "var(--accent-red-bg)"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "transparent"; }}
+                          title="Delete Credit"
+                        >
+                          <TrashIcon />
+                        </button>
+                      </>
+                    )}
                   </div>
+
                 </div>
               ))}
             </div>
@@ -353,12 +381,7 @@ export default function CreditsPage() {
         />
       )}
 
-      {/* Toast */}
-      {toast && (
-         <div className={`toast ${toast.type === "success" ? "toast-success" : "toast-error"}`}>
-         {toast.type === "success" ? "✓" : "✕"} {toast.message}
-       </div>
-      )}
+
     </div>
   );
 }

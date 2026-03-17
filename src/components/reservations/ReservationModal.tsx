@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Reservation, ReservationTemplate } from "@/types";
 import { createReservation } from "@/app/actions/reservationsApi";
 import { fetchReservationTemplates } from "@/app/actions/reservationTemplatesApi";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 interface ModalProps {
   tenantId: string;
@@ -102,18 +103,14 @@ export default function ReservationModal({
           <form id="reservation-form" onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             
             <div className="form-group">
-              <label className="form-label">Template *</label>
-              <select
-                className="form-input"
-                value={formData.template_id}
-                onChange={e => setFormData({ ...formData, template_id: e.target.value })}
-                required
-              >
-                <option value="">Select a template...</option>
-                {templates.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                label="Template *"
+                options={templates}
+                value={formData.template_id || ""}
+                onSelect={(id) => setFormData({ ...formData, template_id: id })}
+                placeholder="Select a template..."
+                searchPlaceholder="Search templates..."
+              />
             </div>
 
             <div className="form-group">

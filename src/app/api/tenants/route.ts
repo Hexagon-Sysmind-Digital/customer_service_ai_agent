@@ -12,11 +12,23 @@ export async function GET() {
   }
 
   try {
+    const headers: Record<string, string> = {
+      "Content-Type": "text/plain",
+      "Authorization": `Bearer ${token}`
+    };
+
+    const tenantId = cookieStore.get("user_tenant")?.value;
+    const role = cookieStore.get("user_role")?.value;
+
+    console.log('DEBUG [API/tenants]:', { role, tenantId });
+
+    if (role === "user" && tenantId) {
+      headers["X-Tenant-ID"] = tenantId;
+      console.log('DEBUG [API/tenants]: Added X-Tenant-ID header');
+    }
+
     const res = await fetch(API_BASE, {
-      headers: {
-        "Content-Type": "text/plain",
-        "Authorization": `Bearer ${token}`
-      },
+      headers: headers,
     });
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });

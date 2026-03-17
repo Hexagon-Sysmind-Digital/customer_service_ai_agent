@@ -30,8 +30,31 @@ export default function LoginPage() {
 
     try {
       const result = await login(formData);
+      console.log('CLIENT DEBUG [login result]:', result);
       if (result.success) {
-        router.push("/tenants");
+        if (result.token) {
+          sessionStorage.setItem("token", result.token);
+          console.log('CLIENT DEBUG: Stored token');
+        }
+        if (result.user?.role) {
+          sessionStorage.setItem("user_role", result.user.role);
+          console.log('CLIENT DEBUG: Stored role:', result.user.role);
+        }
+        if (result.user?.tenant_id) {
+          sessionStorage.setItem("tenant_id", result.user.tenant_id);
+          console.log('CLIENT DEBUG: Stored tenant_id:', result.user.tenant_id);
+        }
+        if (result.api_key) {
+          sessionStorage.setItem("api_key", result.api_key);
+          console.log('CLIENT DEBUG: Stored api_key');
+        }
+
+        // Redirect based on role
+        if (result.user?.role === "admin" || result.user?.role === "owner") {
+          router.push("/tenants");
+        } else {
+          router.push("/chat");
+        }
         router.refresh(); 
       } else {
         setError(result.error || "Login failed");
@@ -219,7 +242,7 @@ export default function LoginPage() {
                   <input
                     id="email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder=""
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -252,7 +275,7 @@ export default function LoginPage() {
                   <input
                     id="password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder=""
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required

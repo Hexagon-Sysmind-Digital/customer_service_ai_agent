@@ -5,19 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { logout } from "@/app/actions/auth";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import { useState, useEffect } from "react";
-import { 
-  BotIcon, 
-  UserIcon, 
-  FaqIcon, 
-  KnowledgeIcon, 
-  ActionIcon,
-  CalendarIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  MenuIcon,
-  CreditCardIcon,
-  ChatIcon
-} from "@/components/icons";
+import { BotIcon, UserIcon, FaqIcon, KnowledgeIcon, ActionIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, MenuIcon, CreditCardIcon, ChatIcon } from "@/components/icons";
+import { getMe } from "@/app/actions/auth";
+import { User } from "@/types";
+import { showToast, showConfirm } from "@/lib/swal";
+
 
 export default function Sidebar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -25,10 +17,20 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved) setIsCollapsed(saved === "true");
+    
+    // Fetch user profile
+    const fetchUser = async () => {
+      const res = await getMe();
+      if (res.success) {
+        setUser(res.data);
+      }
+    };
+    fetchUser();
     
     // Set mounted last to trigger hydration transition
     setIsMounted(true);
@@ -49,28 +51,38 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   if (!isMounted) return <div style={{ display: "flex", minHeight: "100vh" }}>{children}</div>;
 
   const handleLogout = async () => {
+    const result = await showConfirm("Logout", "Are you sure you want to sign out?");
+    if (!result.isConfirmed) return;
+
     setIsLoggingOut(true);
     try {
       await logout();
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user_role");
+      sessionStorage.removeItem("tenant_id");
+      sessionStorage.removeItem("api_key");
       router.push("/");
       router.refresh();
+      showToast("success", "Logged out successfully");
     } catch (error) {
       console.error("Failed to logout", error);
+      showToast("error", "Failed to logout");
       setIsLoggingOut(false);
     }
   };
 
   const navItems = [
     { label: "Tenants", path: "/tenants", icon: BotIcon },
-    { label: "Users", path: "/users", icon: UserIcon },
+    { label: "Users", path: "/users", icon: UserIcon, role: ["admin", "owner"] },
     { label: "FAQs", path: "/faqs", icon: FaqIcon },
     { label: "Knowledge", path: "/knowledge", icon: KnowledgeIcon },
     { label: "Actions", path: "/ai-actions", icon: ActionIcon },
     { label: "Templates", path: "/reservation-templates", icon: CalendarIcon },
     { label: "Reservations", path: "/reservations", icon: CalendarIcon },
     { label: "Chat", path: "/chat", icon: ChatIcon },
-    { label: "Credits", path: "/credits", icon: CreditCardIcon },
-  ];
+    { label: "Credits", path: "/credits", icon: CreditCardIcon, role: ["admin", "owner"] },
+  ].filter(item => !item.role || (user && item.role.includes(user.role)));
+
 
   const sidebarWidth = isCollapsed ? 80 : 260;
 

@@ -6,6 +6,11 @@ import { fetchUsers, deleteUser } from "@/app/actions/users";
 
 import { User } from "@/types";
 import { PlusIcon, EditIcon, TrashIcon } from "@/components/icons";
+import { showToast, showConfirm } from "@/lib/swal";
+
+
+import { getMe } from "@/app/actions/auth";
+import { notFound } from "next/navigation";
 
 function SkeletonRow() {
   return (
@@ -19,12 +24,13 @@ function SkeletonRow() {
 }
 
 export default function UsersPage() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const loadUsers = useCallback(async () => {
     try {
@@ -44,13 +50,29 @@ export default function UsersPage() {
   }, []);
 
   useEffect(() => {
-    loadUsers();
+    const checkAccess = async () => {
+      const res = await getMe();
+      if (res.success) {
+        const user = res.data;
+        setCurrentUser(user);
+        if (user.role === "user") {
+          setAccessDenied(true);
+        } else {
+          loadUsers();
+        }
+      } else {
+        setError("Failed to verify access.");
+        setLoading(false);
+      }
+    };
+    checkAccess();
   }, [loadUsers]);
 
-  const showToast = (type: "success" | "error", message: string) => {
-    setToast({ type, message });
-    setTimeout(() => setToast(null), 3000);
-  };
+  if (accessDenied) {
+    return notFound();
+  }
+
+
 
   const handleCreateNew = () => {
     setSelectedUser(null);
@@ -63,7 +85,8 @@ export default function UsersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    const result = await showConfirm("Are you sure?", "You want to delete this user?");
+    if (!result.isConfirmed) return;
 
     try {
       const res = await deleteUser(id);
@@ -265,12 +288,7 @@ export default function UsersPage() {
         />
       )}
 
-      {/* Toast */}
-      {toast && (
-         <div className={`toast ${toast.type === "success" ? "toast-success" : "toast-error"}`}>
-         {toast.type === "success" ? "✓" : "✕"} {toast.message}
-       </div>
-      )}
+
     </div>
   );
 }

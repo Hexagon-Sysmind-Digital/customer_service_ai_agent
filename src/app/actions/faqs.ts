@@ -10,6 +10,8 @@ export async function fetchFaqs(tenantId: string) {
 
   if (!token) return { success: false, error: "Unauthorized" };
 
+  console.log('DEBUG [fetchFaqs]:', { tenantId });
+
   try {
     const res = await fetch(`${API_BASE}/faqs`, {
       method: "GET",

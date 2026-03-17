@@ -669,3 +669,41 @@ input[type="checkbox"]:checked::after {
   background: #ffffff;
   color: #1a1f36;
 }
+
+/* SweetAlert2 Theme Overrides */
+.swal2-popup.glass-card {
+  border-radius: 20px !important;
+  border: 1px solid var(--card-border) !important;
+  padding: 2rem !important;
+}
+
+.swal-title {
+  font-family: sans-serif !important;
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+  font-size: 24px !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.swal-text {
+  color: var(--text-secondary) !important;
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+}
+
+.swal2-actions {
+  gap: 12px !important;
+  margin-top: 2rem !important;
+}
+
+.swal2-confirm.btn-primary, .swal2-cancel.btn-secondary {
+  margin: 0 !important;
+}
+
+.swal2-timer-progress-bar {
+  background: var(--accent-primary) !important;
+}
+
+.swal2-icon {
+  border-width: 2px !important;
+}

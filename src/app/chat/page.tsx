@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { fetchTenants } from "@/app/actions/tenants";
+import { fetchTenants, fetchTenantById } from "@/app/actions/tenants";
 import { sendChatMessage } from "@/app/actions/chatApi";
-import { Tenant } from "@/types";
+import { getMe } from "@/app/actions/auth";
+import { Tenant, User } from "@/types";
+
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 interface ChatMessage {
   id: string;
@@ -13,8 +16,10 @@ interface ChatMessage {
 }
 
 export default function ChatPage() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
+
   const [loadingTenants, setLoadingTenants] = useState(true);
   
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -25,28 +30,67 @@ export default function ChatPage() {
   const [sessionId] = useState(() => `visitor-${Math.random().toString(36).substring(2, 9)}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const loadTenants = useCallback(async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       setLoadingTenants(true);
-      const res = await fetchTenants();
+      setError(null);
+
+      const userRes = await getMe();
+      if (!userRes.success) {
+        setError("Failed to fetch user profile: " + (userRes.error || "Unknown error"));
+        return;
+      }
+      
+      const user = userRes.data;
+      setCurrentUser(user);
+
+      // Fetch all tenants authorized for this user
+      const res = await fetchTenants(user.id);
+      
+      let finalTenants = [];
       if (res.success && res.data.length > 0) {
-        setTenants(res.data);
-        setSelectedTenantId(res.data[0].id);
-      } else if (res.success) {
-        setTenants([]);
-      } else {
-        setError("Failed to fetch tenants.");
+        finalTenants = res.data;
+      } else if (user.tenant_id) {
+        // Fallback: fetch the single tenant they are explicitly assigned to
+        const tenantRes = await fetchTenantById(user.tenant_id);
+        if (tenantRes.success) {
+          finalTenants = [tenantRes.data];
+        } else if (!res.success) {
+           setError("Failed to fetch tenant info: " + (tenantRes.error || "Unknown error"));
+        }
+      } else if (!res.success) {
+        setError("Failed to fetch tenants: " + (res.error || "Unknown error"));
+      }
+
+      setTenants(finalTenants);
+      if (finalTenants.length > 0) {
+        const storedId = sessionStorage.getItem("tenant_id");
+        if (storedId && finalTenants.some((t: Tenant) => t.id === storedId)) {
+          setSelectedTenantId(storedId);
+        } else {
+          const defaultId = finalTenants[0].id;
+          setSelectedTenantId(defaultId);
+          sessionStorage.setItem("tenant_id", defaultId);
+        }
       }
     } catch {
-      setError("Network error fetching tenants.");
+      setError("An unexpected error occurred.");
     } finally {
       setLoadingTenants(false);
     }
   }, []);
 
+
   useEffect(() => {
-    loadTenants();
-  }, [loadTenants]);
+    loadInitialData();
+  }, [loadInitialData]);
+
+  useEffect(() => {
+    if (selectedTenantId) {
+      sessionStorage.setItem("tenant_id", selectedTenantId);
+    }
+  }, [selectedTenantId]);
+
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -71,13 +115,18 @@ export default function ChatPage() {
 
     try {
       const selectedTenant = tenants.find(t => t.id === selectedTenantId);
-      const res = await sendChatMessage(selectedTenantId, selectedTenant?.api_key || "", sessionId, userMsg.content);
+      const storedApiKey = sessionStorage.getItem("api_key");
+      const apiKeyToUse = storedApiKey || selectedTenant?.api_key || currentUser?.api_key || "";
+      
+      const res = await sendChatMessage(selectedTenantId, apiKeyToUse, sessionId, userMsg.content);
       
       if (res.success) {
         // Assume API returns response message in res.data, or res.data.response, or res.data.message
         let aiContent = "Received response from AI.";
         if (res.data && typeof res.data === 'string') {
             aiContent = res.data;
+        } else if (res.data && res.data.content) {
+            aiContent = res.data.content;
         } else if (res.data && res.data.message) {
             aiContent = res.data.message;
         } else if (res.data && res.data.response) {
@@ -132,27 +181,23 @@ export default function ChatPage() {
         </div>
 
         {/* Tenant Selector */}
-        {!loadingTenants && tenants.length > 0 && (
-          <div style={{ marginBottom: 24, padding: "16px 20px", background: "var(--card-bg)", borderRadius: 12, border: "1px solid var(--border-color)", display: "flex", alignItems: "center", gap: 16 }}>
-            <label style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)" }}>
-              Select Tenant:
-            </label>
-            <select
-              className="form-input"
+        {!loadingTenants && tenants.length > 1 && (
+          <div style={{ marginBottom: 24, padding: "16px 20px", background: "var(--card-bg)", borderRadius: 12, border: "1px solid var(--border-color)" }}>
+            <SearchableSelect
+              label="Select Tenant:"
+              options={tenants}
               value={selectedTenantId}
-              onChange={(e) => {
-                setSelectedTenantId(e.target.value);
+              onSelect={(id) => {
+                setSelectedTenantId(id);
                 setMessages([]); // clear chat on tenant change
                 setError(null);
               }}
-              style={{ maxWidth: 300, background: "var(--background)", borderColor: "var(--card-border)" }}
-            >
-              {tenants.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
+              loading={loadingTenants}
+              style={{ flexDirection: "row", alignItems: "center", gap: 16 }}
+            />
           </div>
         )}
+
 
         {/* Error state (General) */}
         {error && !messages.length && (
@@ -217,10 +262,12 @@ export default function ChatPage() {
                             maxWidth: "80%",
                             padding: "12px 16px",
                             borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                            background: msg.role === "user" ? "var(--accent-primary)" : "var(--card-bg)",
-                            color: msg.role === "user" ? "#fff" : "var(--foreground)",
-                            border: msg.role === "user" ? "none" : "1px solid var(--border-color)",
-                            boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                            background: msg.role === "user" ? "var(--accent-primary)" : "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+                            color: "#fff",
+                            border: "none",
+                            boxShadow: msg.role === "user" 
+                                ? "0 4px 12px rgba(99, 102, 241, 0.2)" 
+                                : "0 4px 12px rgba(139, 92, 246, 0.2)",
                             fontSize: 15,
                             lineHeight: 1.5,
                             whiteSpace: "pre-wrap"
@@ -278,7 +325,7 @@ export default function ChatPage() {
             >
                 <textarea
                     className="form-input"
-                    placeholder={!selectedTenantId ? "Select a tenant first..." : "Type your message..."}
+                    placeholder=""
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     disabled={!selectedTenantId || isSending}

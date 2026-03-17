@@ -1,14 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { fetchTenants } from "@/app/actions/tenants";
-import { fetchKnowledge, deleteKnowledge } from "@/app/actions/knowledge";
-import { Tenant, Knowledge } from "@/types";
-import { PlusIcon, EditIcon, TrashIcon } from "@/components/icons";
+import { fetchTenants, fetchTenantById } from "@/app/actions/tenants";
+import { getMe } from "@/app/actions/auth";
+import { Tenant, Knowledge, User } from "@/types";
+import { PlusIcon, EditIcon, TrashIcon, CheckIcon } from "@/components/icons";
+import { createKnowledge, fetchKnowledge, deleteKnowledge } from "@/app/actions/knowledge";
 import KnowledgeModal from "@/components/knowledge/KnowledgeModal";
+import SearchableSelect from "@/components/ui/SearchableSelect";
+import { showToast, showConfirm } from "@/lib/swal";
+
 
 export default function KnowledgePage() {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
+
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [knowledgeList, setKnowledgeList] = useState<Knowledge[]>([]);
   
@@ -18,26 +24,58 @@ export default function KnowledgePage() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedKnowledge, setSelectedKnowledge] = useState<Knowledge | null>(null);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const loadTenants = useCallback(async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       setLoadingTenants(true);
-      const res = await fetchTenants();
+      setError(null);
+
+      const userRes = await getMe();
+      if (!userRes.success) {
+        setError(`Failed to fetch user profile: ${userRes.error}`);
+        return;
+      }
+
+      
+      const user = userRes.data;
+      setCurrentUser(user);
+
+      // Fetch all tenants authorized for this user
+      const res = await fetchTenants(user.id);
+      
+      let finalTenants = [];
       if (res.success && res.data.length > 0) {
-        setTenants(res.data);
-        setSelectedTenantId(res.data[0].id); // Auto-select the first tenant
-      } else if (res.success) {
-        setTenants([]);
-      } else {
+        finalTenants = res.data;
+      } else if (user.tenant_id) {
+        // Fallback: fetch the single tenant they are explicitly assigned to
+        const tenantRes = await fetchTenantById(user.tenant_id);
+        if (tenantRes.success) {
+          finalTenants = [tenantRes.data];
+        } else if (!res.success) {
+           setError("Failed to fetch tenant info.");
+        }
+      } else if (!res.success) {
         setError("Failed to fetch tenants.");
       }
+
+      setTenants(finalTenants);
+      if (finalTenants.length > 0) {
+        const storedId = sessionStorage.getItem("tenant_id");
+        if (storedId && finalTenants.some((t: Tenant) => t.id === storedId)) {
+          setSelectedTenantId(storedId);
+        } else {
+          const defaultId = finalTenants[0].id;
+          setSelectedTenantId(defaultId);
+          sessionStorage.setItem("tenant_id", defaultId);
+        }
+      }
     } catch {
-      setError("Network error fetching tenants.");
+      setError("An unexpected error occurred.");
     } finally {
       setLoadingTenants(false);
     }
   }, []);
+
 
   const loadKnowledge = useCallback(async (tenantId: string) => {
     if (!tenantId) return;
@@ -58,19 +96,18 @@ export default function KnowledgePage() {
   }, []);
 
   useEffect(() => {
-    loadTenants();
-  }, [loadTenants]);
+    loadInitialData();
+  }, [loadInitialData]);
+
 
   useEffect(() => {
     if (selectedTenantId) {
       loadKnowledge(selectedTenantId);
+      sessionStorage.setItem("tenant_id", selectedTenantId);
     }
   }, [selectedTenantId, loadKnowledge]);
 
-  const showToast = (type: "success" | "error", message: string) => {
-    setToast({ type, message });
-    setTimeout(() => setToast(null), 3000);
-  };
+
 
   const handleCreateNew = () => {
     if (!selectedTenantId) {
@@ -87,7 +124,8 @@ export default function KnowledgePage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this Knowledge item?")) return;
+    const result = await showConfirm("Are you sure?", "You want to delete this Knowledge item?");
+    if (!result.isConfirmed) return;
     if (!selectedTenantId) return;
 
     try {
@@ -108,6 +146,33 @@ export default function KnowledgePage() {
     showToast("success", `Knowledge successfully ${selectedKnowledge ? "updated" : "created"}`);
     if (selectedTenantId) loadKnowledge(selectedTenantId);
   };
+
+  const deployOutOfTopicTemplate = async () => {
+    if (!selectedTenantId) return;
+    
+    const payload = {
+      content: "ini pesan d isi sama user buat template jawaban kalo pertanyaannya kagajelas",
+      source: "out_of_topic",
+      metadata: { department: "system", version: "1.0" }
+    };
+
+    try {
+      setLoadingKnowledge(true);
+      const res = await createKnowledge(selectedTenantId, payload);
+      if (res.success) {
+        showToast("success", "Out of Topic template deployed successfully");
+        loadKnowledge(selectedTenantId);
+      } else {
+        showToast("error", res.error || "Failed to deploy template");
+      }
+    } catch {
+      showToast("error", "Network error");
+    } finally {
+      setLoadingKnowledge(false);
+    }
+  };
+
+  const hasOutOfTopic = knowledgeList.some(k => k.source === "out_of_topic");
 
   return (
     <div style={{ minHeight: "100vh", padding: "32px 24px" }}>
@@ -130,30 +195,66 @@ export default function KnowledgePage() {
               Manage foundational data and policies for AI Agents
             </p>
           </div>
-          <button className="btn-primary" onClick={handleCreateNew} disabled={!selectedTenantId}>
-            <PlusIcon />
-            Add Knowledge
-          </button>
+          {(currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
+            <button className="btn-primary" onClick={handleCreateNew} disabled={!selectedTenantId}>
+              <PlusIcon />
+              Add Knowledge
+            </button>
+          )}
         </div>
 
-        {/* Tenant Selector */}
-        {!loadingTenants && tenants.length > 0 && (
-          <div style={{ marginBottom: 32, padding: "16px 20px", background: "rgba(99, 115, 171, 0.04)", borderRadius: 12, border: "1px solid var(--border-color)", display: "flex", alignItems: "center", gap: 16 }}>
-            <label style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)" }}>
-              Select Tenant:
-            </label>
-            <select
-              className="form-input"
-              value={selectedTenantId}
-              onChange={(e) => setSelectedTenantId(e.target.value)}
-              style={{ maxWidth: 300, background: "var(--background)", borderColor: "var(--card-border)" }}
-            >
-              {tenants.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
+
+        {/* Tenant Selector & System Templates */}
+        {!loadingTenants && tenants.length > 1 && (
+          <div style={{ marginBottom: 32, display: "flex", flexDirection: "column", gap: 24 }}>
+            <div style={{ padding: "16px 20px", background: "rgba(99, 115, 171, 0.04)", borderRadius: 12, border: "1px solid var(--border-color)" }}>
+              <SearchableSelect
+                label="Select Tenant:"
+                options={tenants}
+                value={selectedTenantId}
+                onSelect={setSelectedTenantId}
+                loading={loadingTenants}
+                style={{ flexDirection: "row", alignItems: "center", gap: 16 }}
+              />
+            </div>
+
+
+            {(currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
+                <div className="glass-card" style={{ 
+                  padding: "20px 24px", 
+                  borderLeft: `4px solid ${hasOutOfTopic ? "#22c55e" : "#818cf8"}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "rgba(99, 115, 171, 0.02)"
+                }}>
+                  <div>
+                    <h4 style={{ margin: "0 0 4px 0", fontSize: 16, fontWeight: 600 }}>Default System Template</h4>
+                    <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>
+                      Template jawaban otomatis untuk pertanyaan di luar topik (Out of Topic).
+                    </p>
+                  </div>
+                  <button 
+                    className={hasOutOfTopic ? "btn-secondary" : "btn-primary"}
+                    onClick={deployOutOfTopicTemplate}
+                    disabled={hasOutOfTopic || loadingKnowledge}
+                    style={{ minWidth: 160 }}
+                  >
+                    {hasOutOfTopic ? (
+                      <>
+                        <CheckIcon /> Deployed
+                      </>
+                    ) : (
+                      <>Deploy Template</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
+
 
         {/* Error state */}
         {error && (
@@ -170,7 +271,11 @@ export default function KnowledgePage() {
             fontSize: 14,
           }}>
             <span>⚠️ {error}</span>
+            <button className="btn-secondary" style={{ padding: "6px 14px", fontSize: 13 }} onClick={() => loadInitialData()}>
+              Retry
+            </button>
           </div>
+
         )}
 
         {/* Loading State */}
@@ -192,47 +297,50 @@ export default function KnowledgePage() {
         {!loadingKnowledge && selectedTenantId && knowledgeList.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {knowledgeList.map(knowledge => (
-              <div key={knowledge.id} className="glass-card" style={{ padding: 24, position: "relative" }}>
-                 <div style={{ position: "absolute", top: 20, right: 20, display: "flex", gap: 8 }}>
-                    <button
-                      onClick={() => handleEdit(knowledge)}
-                      style={{
-                        background: "rgba(99, 115, 171, 0.08)",
-                        border: "none",
-                        color: "var(--text-tertiary)",
-                        padding: 6,
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        display: "flex",
-                        transition: "all 0.2s"
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-primary)"; e.currentTarget.style.background = "var(--accent-primary-bg)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
-                      title="Edit Knowledge"
-                    >
-                      <EditIcon />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(knowledge.id)}
-                      style={{
-                        background: "rgba(99, 115, 171, 0.08)",
-                        border: "none",
-                        color: "var(--text-tertiary)",
-                        padding: 6,
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        display: "flex",
-                        transition: "all 0.2s"
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-red)"; e.currentTarget.style.background = "var(--accent-red-bg)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
-                      title="Delete Knowledge"
-                    >
-                      <TrashIcon />
-                    </button>
-                 </div>
+                <div key={knowledge.id} className="glass-card" style={{ padding: 24, position: "relative" }}>
+                  {knowledge.source !== "out_of_topic" && (currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
+                    <div style={{ position: "absolute", top: 20, right: 20, display: "flex", gap: 8 }}>
+                       <button
+                         onClick={() => handleEdit(knowledge)}
+                         style={{
+                           background: "rgba(99, 115, 171, 0.08)",
+                           border: "none",
+                           color: "var(--text-tertiary)",
+                           padding: 6,
+                           borderRadius: 6,
+                           cursor: "pointer",
+                           display: "flex",
+                           transition: "all 0.2s"
+                         }}
+                         onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-primary)"; e.currentTarget.style.background = "var(--accent-primary-bg)"; }}
+                         onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
+                         title="Edit Knowledge"
+                       >
+                         <EditIcon />
+                       </button>
+                       <button
+                         onClick={() => handleDelete(knowledge.id)}
+                         style={{
+                           background: "rgba(99, 115, 171, 0.08)",
+                           border: "none",
+                           color: "var(--text-tertiary)",
+                           padding: 6,
+                           borderRadius: 6,
+                           cursor: "pointer",
+                           display: "flex",
+                           transition: "all 0.2s"
+                         }}
+                         onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-red)"; e.currentTarget.style.background = "var(--accent-red-bg)"; }}
+                         onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; }}
+                         title="Delete Knowledge"
+                       >
+                         <TrashIcon />
+                       </button>
+                    </div>
+                  )}
 
-                 <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingRight: 80 }}>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingRight: knowledge.source === "out_of_topic" ? 0 : 80 }}>
                     <div style={{ 
                       padding: "16px", 
                       background: "rgba(99, 115, 171, 0.04)", 
@@ -308,12 +416,7 @@ export default function KnowledgePage() {
         />
       )}
 
-      {/* Toast */}
-      {toast && (
-         <div className={`toast ${toast.type === "success" ? "toast-success" : "toast-error"}`}>
-         {toast.type === "success" ? "✓" : "✕"} {toast.message}
-       </div>
-      )}
+
     </div>
   );
 }

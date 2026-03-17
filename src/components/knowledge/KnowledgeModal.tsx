@@ -158,7 +158,7 @@ export default function KnowledgeModal({ knowledge, tenantId, onClose, onSuccess
             <textarea
               id="content"
               className="form-input"
-              placeholder="e.g. Cancellation policy details..."
+              placeholder=""
               value={formData.content}
               onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
               required
@@ -191,7 +191,7 @@ export default function KnowledgeModal({ knowledge, tenantId, onClose, onSuccess
             <textarea
               id="metadata"
               className="form-input"
-              placeholder="e.g. { &quot;version&quot;: &quot;1.0&quot; }"
+              placeholder=""
               value={formData.metadata}
               onChange={(e) => setFormData(prev => ({ ...prev, metadata: e.target.value }))}
               rows={4}
