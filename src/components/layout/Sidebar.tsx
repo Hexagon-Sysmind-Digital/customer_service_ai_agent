@@ -19,16 +19,23 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  // Baca role awal dari sessionStorage agar navItems langsung benar (hindari flash admin sidebar)
+  const [initialRole, setInitialRole] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved) setIsCollapsed(saved === "true");
+
+    // Baca role dari sessionStorage sebagai nilai awal agar navItems langsung benar
+    const storedRole = sessionStorage.getItem("user_role");
+    if (storedRole) setInitialRole(storedRole);
     
-    // Fetch user profile
+    // Fetch user profile (update role setelah data lengkap)
     const fetchUser = async () => {
       const res = await getMe();
       if (res.success) {
         setUser(res.data);
+        sessionStorage.setItem("user_role", res.data.role);
       }
     };
     fetchUser();
@@ -72,8 +79,12 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Gunakan role dari user (setelah fetch) atau fallback ke initialRole (dari sessionStorage)
+  const effectiveRole = user?.role ?? initialRole;
+
   const navItems = [
-    { label: "Tenants", path: "/tenants", icon: BotIcon },
+    { label: "Tenants", path: "/tenants", icon: BotIcon, hideForRole: ["user"] },
+    { label: "Profile", path: "/tenants", icon: UserIcon, showForRole: ["user"] },
     { label: "Users", path: "/users", icon: UserIcon, hideForRole: ["user"] },
     { label: "FAQs", path: "/faqs", icon: FaqIcon },
     { label: "Knowledge", path: "/knowledge", icon: KnowledgeIcon },
@@ -82,7 +93,11 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     { label: "Reservations", path: "/reservations", icon: CalendarIcon },
     { label: "Chat", path: "/chat", icon: ChatIcon },
     { label: "Credits", path: "/credits", icon: CreditCardIcon, hideForRole: ["user"] },
-  ].filter(item => !item.hideForRole || (user && !item.hideForRole.includes(user.role)));
+  ].filter(item => {
+    if (item.hideForRole && effectiveRole && item.hideForRole.includes(effectiveRole)) return false;
+    if (item.showForRole && (!effectiveRole || !item.showForRole.includes(effectiveRole))) return false;
+    return true;
+  });
 
 
   const sidebarWidth = isCollapsed ? 80 : 260;

@@ -347,16 +347,16 @@ export default function TenantsPage() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
               <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-                Tenants
+                {currentUser?.role === "user" ? "Profile" : "Tenants"}
               </h1>
-              {!loading && (
+              {!loading && currentUser?.role !== "user" && (
                 <span className="badge badge-count" style={{ fontSize: 13 }}>
                   {tenants.length}
                 </span>
               )}
             </div>
             <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: 0 }}>
-              Manage your AI agent configurations and deployments
+              {currentUser?.role === "user" ? "View and update your account profile" : "Manage your AI agent configurations and deployments"}
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
