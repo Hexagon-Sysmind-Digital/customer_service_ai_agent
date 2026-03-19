@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers'
 
-const API_BASE = 'https://triad.my.id/api/v1'
+const API_BASE = 'https://triad.my.id//api/v1'
 
 export async function fetchTenants(userId?: string) {
   const cookieStore = await cookies()
@@ -39,22 +39,19 @@ export async function fetchTenants(userId?: string) {
     })
 
     const text = await res.text();
-    console.log('DEBUG [fetchTenants] RAW Response:', { status: res.status, text: text.substring(0, 100) });
-
     let data;
     try {
       data = JSON.parse(text);
     } catch (e) {
-      return { success: false, error: `API Error (${res.status}): Invalid JSON | Role: ${role} | Tenant: ${tenantId}` }
+      return { success: false, error: `API Error (${res.status}): ${text.substring(0, 50)}... | Role: ${role}` }
     }
-
+    
     if (!res.ok) {
-        return { success: false, error: `${data.message || 'Error'} (${res.status}) | Role: ${role} | Tenant: ${tenantId}` }
+        return { success: false, error: `${data.message || 'Error'} (${res.status})` }
     }
     return { success: true, data: data.data || [] }
-  } catch (err) {
-    console.error('DEBUG [fetchTenants] Catch Error:', err);
-    return { success: false, error: 'Network error' }
+  } catch (err: any) {
+    return { success: false, error: `Network error: ${err.message || 'Unknown'} | Role: ${role}` }
   }
 }
 
@@ -135,6 +132,8 @@ export async function deleteTenant(id: string) {
 }
 
 export async function fetchTenantById(id: string) {
+  if (!id) return { success: false, error: 'Tenant ID is required' }
+  
   const cookieStore = await cookies()
   const token = cookieStore.get('auth_token')?.value
   if (!token) return { success: false, error: 'Unauthorized' }
@@ -160,16 +159,19 @@ export async function fetchTenantById(id: string) {
       method: 'GET',
       headers: headers
     })
-    const data = await res.json()
-    console.log('DEBUG [fetchTenantById] Response:', { status: res.status, id, data });
+    const text = await res.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      return { success: false, error: `API Error (${res.status}): ${text.substring(0, 50)}... | Role: ${role}` }
+    }
     
     if (!res.ok) {
-        return { success: false, error: `${data.message || 'Error'} (${res.status}) | Role: ${role} | Tenant: ${tenantIdCookie}` }
+        return { success: false, error: `${data.message || 'Error'} (${res.status})` }
     }
-
-    return { success: true, data: data.data }
-  } catch (err) {
-    console.error('DEBUG [fetchTenantById] Catch Error:', err);
-    return { success: false, error: `Network error | Role: ${role}` }
+    return { success: true, data: data.data || [] }
+  } catch (err: any) {
+    return { success: false, error: `Network error: ${err.message || 'Unknown'} | Role: ${role}` }
   }
 }

@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { Reservation } from "@/types";
 
-const API_BASE_URL = "https://triad.my.id/api/v1";
+const API_BASE_URL = "https://triad.my.id//api/v1";
 
 export async function fetchReservations(tenantId: string): Promise<{ success: boolean; data?: Reservation[]; error?: string; status?: number }> {
   const cookieStore = await cookies();
@@ -110,7 +110,7 @@ export async function updateReservationStatus(
       headers: {
         "X-Tenant-ID": tenantId,
         "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json",
+        "Content-Type": "text/plain",
       },
       body: JSON.stringify({ status }),
     });

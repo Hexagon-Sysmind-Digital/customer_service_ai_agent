@@ -27,39 +27,51 @@ export default function FaqsPage() {
 
   const loadInitialData = useCallback(async () => {
     try {
-      setLoadingTenants(true);
       setError(null);
 
+      // 1. Get User Profile
+      let user = null;
+      const storedRole = sessionStorage.getItem("user_role");
+      
       const userRes = await getMe();
-      if (!userRes.success) {
+      if (userRes.success) {
+        user = userRes.data;
+        setCurrentUser(user);
+        sessionStorage.setItem("user_role", user.role);
+      } else if (storedRole) {
+        user = { role: storedRole } as User;
+        setCurrentUser(user);
+      } else {
         setError(`Failed to fetch user profile: ${userRes.error}`);
+        setLoadingTenants(false);
         return;
       }
 
-      
-      const user = userRes.data;
-      console.log('CLIENT DEBUG [user profile]:', user);
-      setCurrentUser(user);
+      // 2. Get Tenants
+      const cachedTenants = sessionStorage.getItem("tenants_list");
+      if (cachedTenants) {
+        try {
+          const parsed = JSON.parse(cachedTenants);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTenants(parsed);
+            setLoadingTenants(false);
+          }
+        } catch (e) {
+          console.error("Failed to parse cached tenants", e);
+        }
+      }
 
-      // Fetch all tenants authorized for this user
-      console.log('CLIENT DEBUG: Calling fetchTenants for userId:', user.id);
       const res = await fetchTenants(user.id);
-      console.log('CLIENT DEBUG [fetchTenants response]:', res);
       
       let finalTenants = [];
       if (res.success && res.data.length > 0) {
         finalTenants = res.data;
       } else if (user.tenant_id) {
-        // Fallback: fetch the single tenant they are explicitly assigned to
-        console.log('CLIENT DEBUG: fetchTenants failed or empty, falling back to fetchTenantById for:', user.tenant_id);
         const tenantRes = await fetchTenantById(user.tenant_id);
-        console.log('CLIENT DEBUG [fetchTenantById response]:', tenantRes);
         if (tenantRes.success) {
           finalTenants = [tenantRes.data];
         } else if (user.role === 'user' && (tenantRes.error?.includes('403') || tenantRes.error?.includes('Forbidden'))) {
-          // Keep a minimal reference so the page can fetch data assigned to this tenant
           finalTenants = [{ id: user.tenant_id, name: "Workspace" } as any];
-
         } else if (!res.success) {
            setError(`Failed to fetch tenant info: ${tenantRes.error}`);
         }
@@ -67,11 +79,11 @@ export default function FaqsPage() {
         setError(`Failed to fetch tenants: ${res.error}`);
       }
 
-      setTenants(finalTenants);
-      console.log('CLIENT DEBUG [finalTenants]:', finalTenants);
       if (finalTenants.length > 0) {
+        setTenants(finalTenants);
+        sessionStorage.setItem("tenants_list", JSON.stringify(finalTenants));
+        
         const storedId = sessionStorage.getItem("tenant_id");
-        console.log('CLIENT DEBUG [sessionStorage tenant_id]:', storedId);
         if (storedId && finalTenants.some((t: Tenant) => t.id === storedId)) {
           setSelectedTenantId(storedId);
         } else {
@@ -89,7 +101,6 @@ export default function FaqsPage() {
 
 
   const loadFaqs = useCallback(async (tenantId: string) => {
-    console.log('CLIENT DEBUG [loadFaqs]: Fetching for tenantId:', tenantId);
     if (!tenantId) return;
     try {
       setLoadingFaqs(true);
@@ -98,7 +109,7 @@ export default function FaqsPage() {
       if (res.success) {
         setFaqs(res.data);
       } else {
-        throw new Error(res.error || "Failed to fetch FAQs");
+        setError(res.error || "Failed to fetch FAQs");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");
@@ -113,7 +124,6 @@ export default function FaqsPage() {
 
 
   useEffect(() => {
-    console.log('CLIENT DEBUG [selectedTenantId]:', selectedTenantId);
     if (selectedTenantId) {
       loadFaqs(selectedTenantId);
       sessionStorage.setItem("tenant_id", selectedTenantId);
@@ -220,6 +230,9 @@ export default function FaqsPage() {
             fontSize: 14,
           }}>
             <span>⚠️ {error}</span>
+            <button className="btn-secondary" style={{ padding: "6px 14px", fontSize: 13 }} onClick={() => loadInitialData()}>
+              Retry
+            </button>
           </div>
         )}
 
@@ -244,7 +257,7 @@ export default function FaqsPage() {
             {faqs.map(faq => (
               <div key={faq.id} className="glass-card" style={{ padding: 24, position: "relative" }}>
                   {(currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
-                   <div style={{ position: "absolute", top: 20, right: 20, display: "flex", gap: 8 }}>
+                    <div style={{ position: "absolute", top: 20, right: 20, display: "flex", gap: 8 }}>
                       <button
                         onClick={() => handleEdit(faq)}
                         style={{
@@ -281,11 +294,11 @@ export default function FaqsPage() {
                       >
                         <TrashIcon />
                       </button>
-                   </div>
-                 )}
+                    </div>
+                  )}
 
 
-                 <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingRight: 80 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingRight: 80 }}>
                     <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--foreground)", margin: 0, lineHeight: 1.4 }}>
                       {faq.question}
                     </h3>
@@ -305,7 +318,7 @@ export default function FaqsPage() {
                         {faq.category}
                       </span>
                     </div>
-                 </div>
+                  </div>
               </div>
             ))}
           </div>

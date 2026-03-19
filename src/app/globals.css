@@ -790,3 +790,22 @@ input[type="checkbox"]:checked::after {
   opacity: 1;
 }
 
+
+/* Sidebar Links Scrollbar */
+.sidebar-links-container::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-links-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-links-container::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 10px;
+}
+.sidebar-links-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+.sidebar-links-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--card-border) transparent;
+}

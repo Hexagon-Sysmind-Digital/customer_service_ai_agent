@@ -26,20 +26,40 @@ export default function ReservationsPage() {
 
   const loadInitialData = useCallback(async () => {
     try {
-      setLoadingTenants(true);
       setError(null);
 
+      // 1. Get User Profile
+      let user = null;
+      const storedRole = sessionStorage.getItem("user_role");
+      
       const userRes = await getMe();
-      if (!userRes.success) {
+      if (userRes.success) {
+        user = userRes.data;
+        setCurrentUser(user);
+        sessionStorage.setItem("user_role", user.role);
+      } else if (storedRole) {
+        user = { role: storedRole } as User;
+        setCurrentUser(user);
+      } else {
         setError(`Failed to fetch user profile: ${userRes.error}`);
+        setLoadingTenants(false);
         return;
       }
 
-      
-      const user = userRes.data;
-      setCurrentUser(user);
+      // 2. Get Tenants
+      const cachedTenants = sessionStorage.getItem("tenants_list");
+      if (cachedTenants) {
+        try {
+          const parsed = JSON.parse(cachedTenants);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTenants(parsed);
+            setLoadingTenants(false);
+          }
+        } catch (e) {
+          console.error("Failed to parse cached tenants", e);
+        }
+      }
 
-      // Fetch all tenants authorized for this user
       const res = await fetchTenants(user.id);
       
       let finalTenants = [];
@@ -48,12 +68,10 @@ export default function ReservationsPage() {
       if (res.success && res.data && res.data.length > 0) {
         finalTenants = res.data;
       } else if (user.tenant_id) {
-        // Fallback: fetch the single tenant they are explicitly assigned to
         const tenantRes = await fetchTenantById(user.tenant_id);
         if (tenantRes.success) {
           finalTenants = [tenantRes.data];
         } else if (user.role === 'user' && (tenantRes.error?.includes('403') || tenantRes.error?.includes('Forbidden'))) {
-          // Silent fallback for regular users to avoid 403 banners
           finalTenants = [{ id: user.tenant_id, name: '' } as any];
         } else {
            fetchError = tenantRes.error || "Failed to fetch tenant info.";
@@ -62,9 +80,10 @@ export default function ReservationsPage() {
         fetchError = res.error || "Failed to fetch tenants.";
       }
 
-      setTenants(finalTenants);
-      if (fetchError) setError(fetchError);
       if (finalTenants.length > 0) {
+        setTenants(finalTenants);
+        sessionStorage.setItem("tenants_list", JSON.stringify(finalTenants));
+        
         const storedId = sessionStorage.getItem("tenant_id");
         if (storedId && finalTenants.some((t: Tenant) => t.id === storedId)) {
           setSelectedTenantId(storedId);
@@ -74,6 +93,8 @@ export default function ReservationsPage() {
           sessionStorage.setItem("tenant_id", defaultId);
         }
       }
+      
+      if (fetchError) setError(fetchError);
     } catch {
       setError("An unexpected error occurred.");
     } finally {
@@ -88,15 +109,10 @@ export default function ReservationsPage() {
       setLoadingReservations(true);
       setError(null);
       const res = await fetchReservations(tenantId);
-      console.log('DEBUG [loadReservations] response:', JSON.stringify(res));
       if (res.success) {
-        // Ensure we always set an array
         const data = Array.isArray(res.data) ? res.data : [];
-        console.log('DEBUG [loadReservations] setting reservations:', data.length);
         setReservations(data);
       } else {
-        console.log('DEBUG [loadReservations] error:', res.error, 'status:', res.status, 'role:', currentUser?.role);
-        // If user gets 403 or any forbidden error, treat as empty
         if (res.status === 403 || res.error?.includes('403') || res.error?.includes('forbidden') || res.error?.includes('Forbidden')) {
           setReservations([]);
         } else {
@@ -105,13 +121,12 @@ export default function ReservationsPage() {
         }
       }
     } catch (err) {
-      console.log('DEBUG [loadReservations] catch error:', err);
       setError(err instanceof Error ? err.message : "Network error");
       setReservations([]);
     } finally {
       setLoadingReservations(false);
     }
-  }, [currentUser?.role]);
+  }, []);
 
   useEffect(() => {
     loadInitialData();
@@ -261,7 +276,6 @@ export default function ReservationsPage() {
               Retry
             </button>
           </div>
-
         )}
 
         {/* Loading State for initial fetch */}
@@ -331,8 +345,8 @@ export default function ReservationsPage() {
                             {res.customer_name}
                         </h3>
                         <span className="badge" style={{
-                            background: res.status === 'confirmed' || res.status === 'confirmeds' ? "rgba(16,185,129,0.12)" : res.status === 'cancelled' ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)",
-                            color: res.status === 'confirmed' || res.status === 'confirmeds' ? "#10b981" : res.status === 'cancelled' ? "var(--accent-red)" : "#f59e0b",
+                            background: res.status === 'confirmed' ? "rgba(16,185,129,0.12)" : res.status === 'cancelled' ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)",
+                            color: res.status === 'confirmed' ? "#10b981" : res.status === 'cancelled' ? "var(--accent-red)" : "#f59e0b",
                             textTransform: "uppercase",
                             fontSize: 11,
                             fontWeight: 600
@@ -370,7 +384,7 @@ export default function ReservationsPage() {
                     {res.status !== 'cancelled' && (currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
                         <div style={{ marginTop: 20, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                             <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-tertiary)", marginRight: 4 }}>Update Status:</span>
-                            {['pending', 'confirmeds', 'completed', 'no_show'].map(status => (
+                            {['pending', 'confirmed', 'completed', 'no_show'].map(status => (
                             <button
                                 key={status}
                                 className={res.status === status ? "btn-primary" : "btn-secondary"}
@@ -378,7 +392,7 @@ export default function ReservationsPage() {
                                 onClick={() => handleStatusUpdate(res.id, status)}
                                 disabled={res.status === status}
                             >
-                                {status === 'confirmeds' ? 'Confirmed' : status.replace('_', ' ')}
+                                {status === 'confirmed' ? 'Confirmed' : status.replace('_', ' ')}
                             </button>
                             ))}
                         </div>

@@ -6,10 +6,9 @@ import { Tenant } from "@/types";
 import { maskApiKey, formatDate } from "@/lib/utils";
 import { CopyIcon, CheckIcon, PlusIcon, BotIcon, EditIcon, TrashIcon } from "@/components/icons";
 import { fetchTenants, fetchTenantById, deleteTenant } from "@/app/actions/tenants";
-import { getMe, updateProfile } from "@/app/actions/auth";
+import { getMe } from "@/app/actions/auth";
 import { User } from "@/types";
 import { showToast, showConfirm } from "@/lib/swal";
-import ProfileModal from "@/components/tenants/ProfileModal";
 
 
 
@@ -241,24 +240,45 @@ export default function TenantsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      setLoading(true);
       setError(null);
       
+      // 1. Get User Profile
+      let user = null;
+      const storedRole = sessionStorage.getItem("user_role");
+      
       const userRes = await getMe();
-      if (!userRes.success) {
+      if (userRes.success) {
+        user = userRes.data;
+        setCurrentUser(user);
+        sessionStorage.setItem("user_role", user.role);
+      } else if (storedRole) {
+        user = { role: storedRole } as User;
+        setCurrentUser(user);
+      } else {
         setError(`Failed to fetch user profile: ${userRes.error}`);
+        setLoading(false);
         return;
       }
 
-
-      const user = userRes.data;
-      setCurrentUser(user);
+      // 2. Get Tenants
+      // Use cached list for immediate display if available
+      const cachedTenants = sessionStorage.getItem("tenants_list");
+      if (cachedTenants) {
+        try {
+          const parsed = JSON.parse(cachedTenants);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTenants(parsed);
+            setLoading(false); // Hide initial skeleton if we have cache
+          }
+        } catch (e) {
+          console.error("Failed to parse cached tenants", e);
+        }
+      }
 
       let finalTenants = [];
 
@@ -268,12 +288,10 @@ export default function TenantsPage() {
           if (tenantRes.success) {
             finalTenants = [tenantRes.data];
           } else {
-            // SILENTLY handle 403 for regular users, as they might only be allowed to see profile
             console.log('DEBUG [TenantsPage] User role tenant fetch failed (ignoring for UI):', tenantRes.error);
           }
         }
       } else {
-        // Admin/Owner: Fetch all authorized tenants
         const res = await fetchTenants(user.id);
         if (res.success && res.data.length > 0) {
           finalTenants = res.data;
@@ -290,6 +308,7 @@ export default function TenantsPage() {
       }
 
       setTenants(finalTenants);
+      sessionStorage.setItem("tenants_list", JSON.stringify(finalTenants));
     } catch (err) {
       setError("An unexpected error occurred.");
     } finally {
@@ -347,7 +366,7 @@ export default function TenantsPage() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
               <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-                {currentUser?.role === "user" ? "Profile" : "Tenants"}
+                {currentUser?.role === "user" ? "My Agent" : "Tenants"}
               </h1>
               {!loading && currentUser?.role !== "user" && (
                 <span className="badge badge-count" style={{ fontSize: 13 }}>
@@ -356,20 +375,10 @@ export default function TenantsPage() {
               )}
             </div>
             <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: 0 }}>
-              {currentUser?.role === "user" ? "View and update your account profile" : "Manage your AI agent configurations and deployments"}
+              {currentUser?.role === "user" ? "Manage your assigned AI agent configuration" : "Manage your AI agent configurations and deployments"}
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {currentUser?.role === "user" && (
-                <button 
-                  className="btn-secondary" 
-                  onClick={() => setIsProfileModalOpen(true)}
-                  style={{ display: "flex", alignItems: "center", gap: 8 }}
-                >
-                  <EditIcon />
-                  Edit Profile
-                </button>
-            )}
             {(currentUser?.role === "admin" || currentUser?.role === "owner") && (
               <button className="btn-primary" onClick={handleCreateNew}>
                 <PlusIcon />
@@ -415,45 +424,6 @@ export default function TenantsPage() {
             ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
             : (
               <>
-                {currentUser?.role === "user" && (
-                  <div className="glass-card p-6 flex flex-col gap-4" style={{ borderColor: "var(--accent-primary)", borderWidth: 2, background: "rgba(99, 102, 241, 0.03)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                       <div style={{
-                         width: 48,
-                         height: 48,
-                         borderRadius: "50%",
-                         background: "var(--accent-primary-bg)",
-                         color: "var(--accent-primary)",
-                         display: "flex",
-                         alignItems: "center",
-                         justifyContent: "center",
-                         fontSize: 20,
-                         fontWeight: 700
-                       }}>
-                         {currentUser.name?.charAt(0) || "U"}
-                       </div>
-                       <div>
-                         <h3 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>{currentUser.name}</h3>
-                         <p style={{ fontSize: 13, color: "var(--text-tertiary)", margin: 0 }}>{currentUser.email}</p>
-                       </div>
-                       <span className="badge badge-active" style={{ marginLeft: "auto" }}>
-                         {currentUser.role}
-                       </span>
-                    </div>
-                    <div style={{ fontSize: 13, color: "var(--text-secondary)", paddingTop: 8, borderTop: "1px solid var(--card-border)" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                          <span>Status</span>
-                          <span style={{ color: currentUser.is_active ? "var(--accent-green)" : "var(--accent-red)", fontWeight: 600 }}>
-                            {currentUser.is_active ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                          <span>Member Since</span>
-                          <span>{currentUser.created_at ? formatDate(currentUser.created_at) : "-"}</span>
-                        </div>
-                    </div>
-                  </div>
-                )}
                 {tenants.map((tenant) => (
                    <TenantCard 
                      key={tenant.id} 
@@ -514,18 +484,6 @@ export default function TenantsPage() {
         />
       )}
 
-      {isProfileModalOpen && currentUser && (
-        <ProfileModal
-          user={currentUser}
-          onClose={() => setIsProfileModalOpen(false)}
-          onSuccess={() => {
-            setIsProfileModalOpen(false);
-            showToast("success", "Profile updated successfully");
-            loadData();
-          }}
-          onError={(msg) => showToast("error", msg)}
-        />
-      )}
 
 
     </div>

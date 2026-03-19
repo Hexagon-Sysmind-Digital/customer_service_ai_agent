@@ -1,6 +1,6 @@
 "use server";
 
-const API_BASE_URL = "https://triad.my.id/api/v1";
+const API_BASE_URL = "https://triad.my.id//api/v1";
 
 export async function sendChatMessage(
   tenantId: string,

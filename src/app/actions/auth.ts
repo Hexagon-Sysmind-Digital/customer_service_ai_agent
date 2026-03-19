@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers'
  
-const API_BASE = 'https://triad.my.id/api/v1'
+const API_BASE = 'https://triad.my.id//api/v1'
 
 export async function login(formData: FormData) {
   const email = formData.get('email')
@@ -117,7 +117,7 @@ export async function getMe() {
     try {
       data = JSON.parse(text);
     } catch (e) {
-      return { success: false, error: `Invalid JSON response (${res.status})` }
+      return { success: false, error: `API Error (${res.status}): ${text.substring(0, 50)}...` }
     }
 
     if (!res.ok) {
@@ -157,7 +157,7 @@ export async function getMe() {
   }
 }
 
-export async function updateProfile(payload: { name: string }) {
+export async function updateProfile(payload: { name?: string; email?: string; password?: string }) {
   const cookieStore = await cookies()
   const token = cookieStore.get('auth_token')?.value
 

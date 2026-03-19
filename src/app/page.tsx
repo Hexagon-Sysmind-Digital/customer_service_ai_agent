@@ -17,6 +17,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     setMounted(true);
+    // Menghapus caching yang mungkin tersisa agar login baru bersih (mencegah bug sidebar salah role)
+    sessionStorage.removeItem("user_role");
+    sessionStorage.removeItem("tenants_list");
+    sessionStorage.removeItem("tenant_id");
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {

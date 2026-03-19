@@ -55,9 +55,6 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Prevent hydration mismatch for classes/styles that depend on localStorage
-  if (!isMounted) return <div style={{ display: "flex", minHeight: "100vh" }}>{children}</div>;
-
   const handleLogout = async () => {
     const result = await showConfirm("Logout", "Are you sure you want to sign out?");
     if (!result.isConfirmed) return;
@@ -84,7 +81,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { label: "Tenants", path: "/tenants", icon: BotIcon, hideForRole: ["user"] },
-    { label: "Profile", path: "/tenants", icon: UserIcon, showForRole: ["user"] },
+    { label: "Profile", path: "/profile", icon: UserIcon, showForRole: ["user"] },
     { label: "Users", path: "/users", icon: UserIcon, hideForRole: ["user"] },
     { label: "FAQs", path: "/faqs", icon: FaqIcon },
     { label: "Knowledge", path: "/knowledge", icon: KnowledgeIcon },
@@ -94,8 +91,10 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     { label: "Chat", path: "/chat", icon: ChatIcon },
     { label: "Credits", path: "/credits", icon: CreditCardIcon, hideForRole: ["user"] },
   ].filter(item => {
-    if (item.hideForRole && effectiveRole && item.hideForRole.includes(effectiveRole)) return false;
-    if (item.showForRole && (!effectiveRole || !item.showForRole.includes(effectiveRole))) return false;
+    const hide = (item as any).hideForRole;
+    const show = (item as any).showForRole;
+    if (hide && effectiveRole && hide.includes(effectiveRole)) return false;
+    if (show && (!effectiveRole || !show.includes(effectiveRole))) return false;
     return true;
   });
 
@@ -186,7 +185,18 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Links */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          gap: 8, 
+          flex: 1,
+          overflowY: "auto",
+          overflowX: "hidden",
+          paddingRight: isCollapsed ? 0 : 4,
+          marginRight: isCollapsed ? 0 : -4, // Hack to keep padding but hide scrollbar if possible or at least make it look intentional
+        }}
+        className="sidebar-links-container"
+        >
           {!isCollapsed && (
             <span style={{ padding: "0 8px", fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>
               Main Menu

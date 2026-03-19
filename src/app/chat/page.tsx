@@ -55,9 +55,10 @@ export default function ChatPage() {
         const tenantRes = await fetchTenantById(user.tenant_id);
         if (tenantRes.success) {
           finalTenants = [tenantRes.data];
-        } else if (user.role === 'user' && (tenantRes.error?.includes('403') || tenantRes.error?.includes('Forbidden'))) {
-          // Silent fallback for regular users to avoid 403 banners
-          finalTenants = [{ id: user.tenant_id, name: '' } as any];
+        } else if (user.role === 'user') {
+          // If we can't fetch tenant info but we have the ID, create a minimal placeholder
+          // this prevents the whole page from failing for regular users (fixed 503/403 issue)
+          finalTenants = [{ id: user.tenant_id, name: user.name || 'My Agent' } as any];
         } else if (!res.success) {
            setError("Failed to fetch tenant info: " + (tenantRes.error || "Unknown error"));
         }
@@ -124,7 +125,6 @@ export default function ChatPage() {
       const res = await sendChatMessage(selectedTenantId, apiKeyToUse, sessionId, userMsg.content);
       
       if (res.success) {
-        // Assume API returns response message in res.data, or res.data.response, or res.data.message
         let aiContent = "Received response from AI.";
         if (res.data && typeof res.data === 'string') {
             aiContent = res.data;
@@ -151,7 +151,6 @@ export default function ChatPage() {
     } catch (err: any) {
       setError(err.message || "Network error while sending message");
       
-      // Optionally add an error message bubble
       const errorMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "ai",
@@ -192,7 +191,7 @@ export default function ChatPage() {
               value={selectedTenantId}
               onSelect={(id) => {
                 setSelectedTenantId(id);
-                setMessages([]); // clear chat on tenant change
+                setMessages([]); 
                 setError(null);
               }}
               loading={loadingTenants}
@@ -223,7 +222,7 @@ export default function ChatPage() {
             display: "flex", 
             flexDirection: "column", 
             overflow: "hidden",
-            height: "60vh", // Fixed height to enable internal scrolling
+            height: "60vh", 
             maxHeight: 700
         }}>
           

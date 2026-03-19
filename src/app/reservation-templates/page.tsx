@@ -27,32 +27,50 @@ export default function ReservationTemplatesPage() {
 
   const loadInitialData = useCallback(async () => {
     try {
-      setLoadingTenants(true);
       setError(null);
 
+      // 1. Get User Profile
+      let user = null;
+      const storedRole = sessionStorage.getItem("user_role");
+      
       const userRes = await getMe();
-      if (!userRes.success) {
+      if (userRes.success) {
+        user = userRes.data;
+        setCurrentUser(user);
+        sessionStorage.setItem("user_role", user.role);
+      } else if (storedRole) {
+        user = { role: storedRole } as User;
+        setCurrentUser(user);
+      } else {
         setError(`Failed to fetch user profile: ${userRes.error}`);
+        setLoadingTenants(false);
         return;
       }
 
-      
-      const user = userRes.data;
-      setCurrentUser(user);
+      // 2. Get Tenants
+      const cachedTenants = sessionStorage.getItem("tenants_list");
+      if (cachedTenants) {
+        try {
+          const parsed = JSON.parse(cachedTenants);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTenants(parsed);
+            setLoadingTenants(false);
+          }
+        } catch (e) {
+          console.error("Failed to parse cached tenants", e);
+        }
+      }
 
-      // Fetch all tenants authorized for this user
       const res = await fetchTenants(user.id);
       
       let finalTenants = [];
       if (res.success && res.data.length > 0) {
         finalTenants = res.data;
       } else if (user.tenant_id) {
-        // Fallback: fetch the single tenant they are explicitly assigned to
         const tenantRes = await fetchTenantById(user.tenant_id);
         if (tenantRes.success) {
           finalTenants = [tenantRes.data];
         } else if (user.role === 'user' && (tenantRes.error?.includes('403') || tenantRes.error?.includes('Forbidden'))) {
-          // Silent fallback for regular users to avoid 403 banners
           finalTenants = [{ id: user.tenant_id, name: '' } as any];
         } else if (!res.success) {
            setError("Failed to fetch tenant info.");
@@ -61,8 +79,10 @@ export default function ReservationTemplatesPage() {
         setError("Failed to fetch tenants.");
       }
 
-      setTenants(finalTenants);
       if (finalTenants.length > 0) {
+        setTenants(finalTenants);
+        sessionStorage.setItem("tenants_list", JSON.stringify(finalTenants));
+        
         const storedId = sessionStorage.getItem("tenant_id");
         if (storedId && finalTenants.some((t: Tenant) => t.id === storedId)) {
           setSelectedTenantId(storedId);
@@ -89,7 +109,7 @@ export default function ReservationTemplatesPage() {
       if (res.success) {
         setTemplates(res.data);
       } else {
-        throw new Error(res.error || "Failed to fetch templates");
+        setError(res.error || "Failed to fetch templates");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");
@@ -224,7 +244,6 @@ export default function ReservationTemplatesPage() {
               Retry
             </button>
           </div>
-
         )}
 
         {/* Loading State */}
