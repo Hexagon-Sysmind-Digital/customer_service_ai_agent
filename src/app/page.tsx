@@ -53,12 +53,8 @@ export default function LoginPage() {
           console.log('CLIENT DEBUG: Stored api_key');
         }
 
-        // Redirect based on role
-        if (result.user?.role === "admin" || result.user?.role === "owner") {
-          router.push("/tenants");
-        } else {
-          router.push("/chat");
-        }
+        // Redirect to unified dashboard
+        router.push("/dashboard");
         router.refresh(); 
       } else {
         setError(result.error || "Login failed");

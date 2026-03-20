@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { logout } from "@/app/actions/auth";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import { useState, useEffect } from "react";
-import { BotIcon, UserIcon, FaqIcon, KnowledgeIcon, ActionIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, MenuIcon, CreditCardIcon, ChatIcon } from "@/components/icons";
+import { BotIcon, UserIcon, FaqIcon, KnowledgeIcon, ActionIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, MenuIcon, CreditCardIcon, ChatIcon, AlertCircleIcon, DashboardIcon } from "@/components/icons";
 import { getMe } from "@/app/actions/auth";
 import { User } from "@/types";
 import { showToast, showConfirm } from "@/lib/swal";
@@ -80,6 +80,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const effectiveRole = user?.role ?? initialRole;
 
   const navItems = [
+    { label: "Dashboard", path: "/dashboard", icon: DashboardIcon },
     { label: "Tenants", path: "/tenants", icon: BotIcon, hideForRole: ["user"] },
     { label: "Profile", path: "/profile", icon: UserIcon, showForRole: ["user"] },
     { label: "Users", path: "/users", icon: UserIcon, hideForRole: ["user"] },
@@ -89,6 +90,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     { label: "Templates", path: "/reservation-templates", icon: CalendarIcon },
     { label: "Reservations", path: "/reservations", icon: CalendarIcon },
     { label: "Chat", path: "/chat", icon: ChatIcon },
+    { label: "Errors", path: "/error-management", icon: AlertCircleIcon, hideForRole: ["user"] },
     { label: "Credits", path: "/credits", icon: CreditCardIcon, hideForRole: ["user"] },
   ].filter(item => {
     const hide = (item as any).hideForRole;

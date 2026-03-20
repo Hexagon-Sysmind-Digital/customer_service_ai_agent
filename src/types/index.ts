@@ -137,3 +137,41 @@ export interface Reservation {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface Model {
+  id: string;
+  model_name: string;
+  model_code: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AppError {
+  id: string;
+  error_code: string;
+  message: string;
+  http_status: number;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminDashboardSummary {
+  total_tenants: number;
+  total_users: number;
+  active_credits: number;
+  overdue_credits: number;
+}
+
+export interface UserDashboardSummary {
+  total_sessions: number;
+  active_sessions: number;
+  total_knowledge_bases: number;
+  total_faqs: number;
+}
+
+export interface DashboardResponse {
+  data: AdminDashboardSummary | UserDashboardSummary;
+  success: boolean;
+}

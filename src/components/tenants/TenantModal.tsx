@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { createTenant, updateTenant } from "@/app/actions/tenants";
+import { fetchModels } from "@/app/actions/models";
 
-import { Tenant } from "@/types";
+import { Tenant, Model } from "@/types";
 
 interface TenantModalProps {
   tenant?: Tenant | null;
@@ -28,6 +29,26 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
     cs_webhook_url: tenant?.config?.cs_webhook_url || "",
     language: tenant?.config?.language || "id",
   });
+
+  const [availableModels, setAvailableModels] = useState<Model[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+
+  useEffect(() => {
+    async function getModels() {
+      try {
+        setLoadingModels(true);
+        const res = await fetchModels();
+        if (res.success) {
+          setAvailableModels(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch models:", err);
+      } finally {
+        setLoadingModels(false);
+      }
+    }
+    getModels();
+  }, []);
 
   const updateField = (key: string, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -141,23 +162,38 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
           {/* Model & Language row */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
             <div style={fieldGroupStyle}>
-              <label style={labelStyle}>Model Name</label>
               <div className="chip-grid">
-                {[
-                  { value: "qwen-plus", label: "Qwen Plus" },
-                  { value: "qwen-vl-max", label: "Qwen VL Max" },
-                  { value: "qwen-vl-plus", label: "Qwen VL Plus" },
-                  { value: "qwen-turbo", label: "Qwen Turbo" },
-                ].map((m) => (
-                  <button
-                    key={m.value}
-                    type="button"
-                    onClick={() => updateField("model_name", m.value)}
-                    className={`chip-button ${form.model_name === m.value ? "active" : ""}`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
+                {loadingModels ? (
+                  <div style={{ color: "var(--text-tertiary)", fontSize: 13, padding: "8px 0" }}>Loading models...</div>
+                ) : availableModels.length > 0 ? (
+                  availableModels.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => updateField("model_name", m.model_code)}
+                      className={`chip-button ${form.model_name === m.model_code ? "active" : ""}`}
+                    >
+                      {m.model_name}
+                    </button>
+                  ))
+                ) : (
+                  /* Fallback to original hardcoded list if API fails or is empty */
+                  [
+                    { value: "qwen-plus", label: "Qwen Plus" },
+                    { value: "qwen-vl-max", label: "Qwen VL Max" },
+                    { value: "qwen-vl-plus", label: "Qwen VL Plus" },
+                    { value: "qwen-turbo", label: "Qwen Turbo" },
+                  ].map((m) => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => updateField("model_name", m.value)}
+                      className={`chip-button ${form.model_name === m.value ? "active" : ""}`}
+                    >
+                      {m.label}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
             
