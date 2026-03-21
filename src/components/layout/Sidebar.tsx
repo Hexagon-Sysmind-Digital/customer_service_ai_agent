@@ -22,9 +22,21 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   // Baca role awal dari sessionStorage agar navItems langsung benar (hindari flash admin sidebar)
   const [initialRole, setInitialRole] = useState<string | null>(null);
 
+  // Sidebar collapse state - runs once on mount
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved) setIsCollapsed(saved === "true");
+    setIsMounted(true);
+  }, []);
+
+  // Re-fetch user when pathname changes (handles role switch after logout+login)
+  useEffect(() => {
+    // If on login page, clear user state so stale role doesn't linger
+    if (pathname === "/" || pathname === "/login") {
+      setUser(null);
+      setInitialRole(null);
+      return;
+    }
 
     // Baca role dari sessionStorage sebagai nilai awal agar navItems langsung benar
     const storedRole = sessionStorage.getItem("user_role");
@@ -39,10 +51,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
       }
     };
     fetchUser();
-    
-    // Set mounted last to trigger hydration transition
-    setIsMounted(true);
-  }, []);
+  }, [pathname]);
 
   const toggleSidebar = () => {
     const newState = !isCollapsed;

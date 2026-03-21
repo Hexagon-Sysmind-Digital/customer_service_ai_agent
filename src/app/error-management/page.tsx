@@ -9,6 +9,7 @@ import { getMe } from "@/app/actions/auth";
 import { User } from "@/types";
 import { showToast, showConfirm } from "@/lib/swal";
 import { formatDate } from "@/lib/utils";
+import NotFound from "@/app/not-found";
 
 function ErrorRow({ error, onEdit, onDelete }: { error: AppError, onEdit: (e: AppError) => void, onDelete: (id: string) => void }) {
   return (
@@ -68,6 +69,7 @@ export default function ErrorManagementPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedError, setSelectedError] = useState<AppError | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -77,6 +79,17 @@ export default function ErrorManagementPage() {
       const userRes = await getMe();
       if (userRes.success) {
         setCurrentUser(userRes.data);
+        if (userRes.data.role === "user") {
+          setIsAuthorized(false);
+          setLoading(false);
+          return;
+        } else {
+          setIsAuthorized(true);
+        }
+      } else {
+        setIsAuthorized(false);
+        setLoading(false);
+        return;
       }
 
       const res = await fetchAppErrors();
@@ -128,6 +141,10 @@ export default function ErrorManagementPage() {
     showToast("success", `Error code successfully ${selectedError ? "updated" : "created"}`);
     loadData();
   };
+
+  if (isAuthorized === false) {
+    return <NotFound />;
+  }
 
   return (
     <div style={{ minHeight: "100vh", padding: "32px 24px" }}>

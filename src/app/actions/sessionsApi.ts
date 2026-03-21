@@ -70,3 +70,70 @@ export async function fetchSession(
       return { success: false, error: err.message || "Failed to fetch session" };
     }
 }
+
+export async function fetchSessionMessages(
+  tenantId: string,
+  id: string,
+  limit: number = 20
+): Promise<{ success: boolean; data?: any[]; error?: string }> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+
+    if (!token) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const res = await fetch(`${API_BASE_URL}/sessions/${id}/messages?limit=${limit}`, {
+      method: "GET",
+      headers: {
+        "X-Tenant-ID": tenantId,
+        "Authorization": `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        return { success: false, error: errText || `Failed with status ${res.status}` };
+    }
+
+    const json = await res.json();
+    return { success: true, data: json.data || json };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to fetch session messages" };
+  }
+}
+
+export async function deleteSession(
+  tenantId: string,
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+
+    if (!token) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const res = await fetch(`${API_BASE_URL}/sessions/${id}`, {
+      method: "DELETE",
+      headers: {
+        "X-Tenant-ID": tenantId,
+        "Authorization": `Bearer ${token}`,
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        return { success: false, error: errText || `Failed with status ${res.status}` };
+    }
+
+    const json = await res.json();
+    return { success: true, ...json };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to delete session" };
+  }
+}

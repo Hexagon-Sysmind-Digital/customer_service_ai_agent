@@ -95,6 +95,11 @@ export async function login(formData: FormData) {
 export async function logout() {
   const cookieStore = await cookies()
   cookieStore.delete('auth_token')
+  cookieStore.delete('user_id')
+  cookieStore.delete('user_role')
+  cookieStore.delete('user_tenant')
+  cookieStore.delete('user_name')
+  cookieStore.delete('api_key')
   return { success: true }
 }
 
