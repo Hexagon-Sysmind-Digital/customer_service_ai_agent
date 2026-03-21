@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { fetchDashboardSummary } from "@/app/actions/dashboard";
 import { getMe } from "@/app/actions/auth";
 import { User, AdminDashboardSummary, UserDashboardSummary } from "@/types";
+import { useRouter } from "next/navigation";
 import { 
   BotIcon, 
   UserIcon, 
@@ -154,10 +155,12 @@ function StatCard({ label, value, icon: Icon, color, delay }: { label: string, v
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [summary, setSummary] = useState<AdminDashboardSummary | UserDashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastChecked, setLastChecked] = useState<string>("");
 
   const loadData = useCallback(async () => {
     try {
@@ -172,6 +175,7 @@ export default function DashboardPage() {
       const summaryRes = await fetchDashboardSummary();
       if (summaryRes.success) {
         setSummary(summaryRes.data);
+        setLastChecked(new Date().toLocaleTimeString());
       } else {
         setError(summaryRes.error || "Failed to fetch dashboard data");
       }
@@ -281,7 +285,7 @@ export default function DashboardPage() {
                   values={[adminStats?.total_tenants || 0, adminStats?.total_users || 0]} 
                   labels={["Tenants", "Users"]} 
                   colors={["#6366f1", "#a855f7"]} 
-                  centerLabel="Entites"
+                  centerLabel="Entities"
                 />
               </div>
             </div>
@@ -292,7 +296,7 @@ export default function DashboardPage() {
                 <div className="glass-card p-8 h-full flex flex-col justify-center" style={{ animation: "slideUp 0.6s ease-out 500ms fill-mode-both" }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 24 }}>Session Status</p>
                   <DonutChart 
-                    values={[userStats?.active_sessions || 0, (userStats?.total_sessions || 0) - (userStats?.active_sessions || 0)]} 
+                    values={[userStats?.active_sessions || 0, Math.max(0, (userStats?.total_sessions || 0) - (userStats?.active_sessions || 0))]} 
                     labels={["Active", "Completed"]} 
                     colors={["#22c55e", "#64748b"]} 
                     centerLabel="Sessions"
@@ -320,35 +324,35 @@ export default function DashboardPage() {
              <div className="glass-card p-8" style={{ borderLeft: "4px solid var(--accent-primary)", height: "100%", animation: "slideUp 0.6s ease-out 700ms fill-mode-both" }}>
                 <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>Quick Shortcuts</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                   <button className="btn-secondary" style={{ justifyContent: "flex-start", padding: "14px 18px", borderRadius: 12 }} onClick={() => window.location.href='/chat'}>
-                      <div style={{ background: "rgba(99,102,241,0.1)", p: 8, borderRadius: 8, display: "flex", color: "#6366f1", marginRight: 8 }}>
+                   <button className="btn-secondary" style={{ justifyContent: "flex-start", padding: "14px 18px", borderRadius: 12 }} onClick={() => router.push('/chat')}>
+                      <div style={{ background: "rgba(99,102,241,0.1)", padding: 8, borderRadius: 8, display: "flex", color: "#6366f1", marginRight: 8 }}>
                         <ChatIcon />
                       </div>
                       Open Agent Chat
                    </button>
                    {isAdmin ? (
-                     <button className="btn-secondary" style={{ justifyContent: "flex-start", padding: "14px 18px", borderRadius: 12 }} onClick={() => window.location.href='/tenants'}>
-                        <div style={{ background: "rgba(139,92,246,0.1)", p: 8, borderRadius: 8, display: "flex", color: "#8b5cf6", marginRight: 8 }}>
+                     <button className="btn-secondary" style={{ justifyContent: "flex-start", padding: "14px 18px", borderRadius: 12 }} onClick={() => router.push('/tenants')}>
+                        <div style={{ background: "rgba(139,92,246,0.1)", padding: 8, borderRadius: 8, display: "flex", color: "#8b5cf6", marginRight: 8 }}>
                           <BotIcon />
                         </div>
                         Tenants Portal
                      </button>
                    ) : (
-                     <button className="btn-secondary" style={{ justifyContent: "flex-start", padding: "14px 18px", borderRadius: 12 }} onClick={() => window.location.href='/profile'}>
-                        <div style={{ background: "rgba(139,92,246,0.1)", p: 8, borderRadius: 8, display: "flex", color: "#8b5cf6", marginRight: 8 }}>
+                     <button className="btn-secondary" style={{ justifyContent: "flex-start", padding: "14px 18px", borderRadius: 12 }} onClick={() => router.push('/profile')}>
+                        <div style={{ background: "rgba(139,92,246,0.1)", padding: 8, borderRadius: 8, display: "flex", color: "#8b5cf6", marginRight: 8 }}>
                           <UserIcon />
                         </div>
                         Agent Settings
                      </button>
                    )}
-                   <button className="btn-secondary" style={{ justifyContent: "flex-start", padding: "14px 18px", borderRadius: 12 }} onClick={() => window.location.href='/knowledge'}>
-                      <div style={{ background: "rgba(34,197,94,0.1)", p: 8, borderRadius: 8, display: "flex", color: "#22c55e", marginRight: 8 }}>
+                   <button className="btn-secondary" style={{ justifyContent: "flex-start", padding: "14px 18px", borderRadius: 12 }} onClick={() => router.push('/knowledge')}>
+                      <div style={{ background: "rgba(34,197,94,0.1)", padding: 8, borderRadius: 8, display: "flex", color: "#22c55e", marginRight: 8 }}>
                         <KnowledgeIcon />
                       </div>
                       Knowledge Base
                    </button>
-                   <button className="btn-secondary" style={{ justifyContent: "flex-start", padding: "14px 18px", borderRadius: 12 }} onClick={() => window.location.href='/faqs'}>
-                      <div style={{ background: "rgba(245,158,11,0.1)", p: 8, borderRadius: 8, display: "flex", color: "#f59e0b", marginRight: 8 }}>
+                   <button className="btn-secondary" style={{ justifyContent: "flex-start", padding: "14px 18px", borderRadius: 12 }} onClick={() => router.push('/faqs')}>
+                      <div style={{ background: "rgba(245,158,11,0.1)", padding: 8, borderRadius: 8, display: "flex", color: "#f59e0b", marginRight: 8 }}>
                         <FaqIcon />
                       </div>
                       FAQ Manager
@@ -382,9 +386,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
-                <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "24px 0 0 0", fontStyle: "italic" }}>
-                   Real-time monitoring active. Last update: {new Date().toLocaleTimeString()}
-                </p>
+                {lastChecked && (
+                  <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "24px 0 0 0", fontStyle: "italic" }}>
+                    Real-time monitoring active. Last update: {lastChecked}
+                  </p>
+                )}
              </div>
           </div>
 
@@ -392,7 +398,7 @@ export default function DashboardPage() {
 
       </div>
 
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @keyframes slideRight {
           from { opacity: 0; transform: translateX(-20px); }
           to { opacity: 1; transform: translateX(0); }
@@ -419,12 +425,12 @@ export default function DashboardPage() {
           100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
         @media (max-width: 1024px) {
-          div[style*="grid-template-columns: repeat(12, 1fr)"] {
+          .analysis-grid {
             display: flex !important;
             flex-direction: column;
           }
         }
-      `}</style>
+      `}} />
     </div>
   );
 }
