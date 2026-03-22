@@ -146,6 +146,21 @@ export interface Model {
   updated_at?: string;
 }
 
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  image_url?: string;
+  category: string;
+  stock: number;
+  is_active: boolean;
+  tenant_id: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface AppError {
   id: string;
   error_code: string;
