@@ -98,8 +98,10 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     { label: "Knowledge", path: "/knowledge", icon: KnowledgeIcon },
     { label: "Actions", path: "/ai-actions", icon: ActionIcon },
     { label: "Templates", path: "/reservation-templates", icon: CalendarIcon },
+    { label: "Response", path: "/response-templates", icon: FaqIcon },
     { label: "Reservations", path: "/reservations", icon: CalendarIcon },
     { label: "Chat", path: "/chat", icon: ChatIcon },
+    { label: "Sessions", path: "/sessions", icon: ChatIcon },
     { label: "Errors", path: "/error-management", icon: AlertCircleIcon, hideForRole: ["user"] },
     { label: "Credits", path: "/credits", icon: CreditCardIcon, hideForRole: ["user"] },
   ].filter(item => {
