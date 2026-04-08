@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useRef, useEffect, ReactNode } from "react";
 import { Product } from "@/types";
-import { PlusIcon, SearchIcon, GridIcon, ListIcon } from "@/components/icons";
-import { showToast } from "@/lib/swal";
+import { PlusIcon, SearchIcon, GridIcon, ListIcon, TrashIcon, EditIcon, CloseIcon, CheckIcon, ChevronRightIcon } from "@/components/icons";
+import { showToast, showConfirm } from "@/lib/swal";
+import { fetchProducts, createProduct, updateProduct, deleteProduct, uploadProductImage } from "@/app/actions/products";
 
 // ========== CUSTOM DROPDOWN COMPONENT ==========
 interface DropdownItem { value: string; label: string; }
@@ -13,9 +14,10 @@ interface CustomDropdownProps {
   items: DropdownItem[];
   value: string;
   onSelect: (value: string) => void;
+  width?: string | number;
 }
 
-function CustomDropdown({ icon, label, items, value, onSelect }: CustomDropdownProps) {
+function CustomDropdown({ icon, label, items, value, onSelect, width }: CustomDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -28,120 +30,69 @@ function CustomDropdown({ icon, label, items, value, onSelect }: CustomDropdownP
   }, []);
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
-      {/* Trigger Button */}
+    <div ref={ref} style={{ position: "relative", width: width || 'auto' }}>
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: 8,
-          padding: "9px 14px",
-          background: isOpen ? "rgba(99, 102, 241, 0.08)" : "var(--input-bg)",
+          gap: 10,
+          padding: "10px 14px",
+          width: '100%',
+          background: "var(--input-bg)",
           border: `1.5px solid ${isOpen ? "var(--accent-primary)" : "var(--input-border)"}`,
           borderRadius: 12,
-          color: isOpen ? "var(--accent-primary)" : "var(--text-secondary)",
-          fontSize: 13,
-          fontWeight: 600,
+          color: (isOpen || value !== "all") ? "var(--foreground)" : "var(--text-secondary)",
+          fontSize: 14,
+          fontWeight: 500,
           cursor: "pointer",
-          fontFamily: "inherit",
-          whiteSpace: "nowrap",
-          transition: "all 0.2s ease",
-          boxShadow: isOpen ? "0 0 0 3px rgba(99, 102, 241, 0.1)" : "none",
-        }}
-        onMouseEnter={(e) => {
-          if (!isOpen) {
-            e.currentTarget.style.borderColor = "var(--card-hover-border)";
-            e.currentTarget.style.color = "var(--foreground)";
-            e.currentTarget.style.background = "rgba(99, 115, 171, 0.06)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isOpen) {
-            e.currentTarget.style.borderColor = "var(--input-border)";
-            e.currentTarget.style.color = "var(--text-secondary)";
-            e.currentTarget.style.background = "var(--input-bg)";
-          }
+          transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+          boxShadow: isOpen ? "0 0 0 4px rgba(99, 102, 241, 0.1)" : "none",
+          justifyContent: 'space-between'
         }}
       >
-        {icon && <span style={{ display: "flex", opacity: 0.7 }}>{icon}</span>}
-        {label}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {icon && <span style={{ display: "flex", opacity: 0.8 }}>{icon}</span>}
+            <span style={{ textTransform: 'capitalize' }}>{items.find(i => i.value === value)?.label || label}</span>
+        </div>
         <svg
           width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-          style={{
-            marginLeft: 2,
-            transition: "transform 0.2s ease",
-            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
-          }}
+          strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transition: "transform 0.3s ease", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.5 }}
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
 
-      {/* Dropdown Menu */}
       {isOpen && (
         <div style={{
-          position: "absolute",
-          top: "calc(100% + 6px)",
-          left: 0,
-          minWidth: 200,
-          background: "var(--modal-bg)",
-          border: "1px solid var(--card-border)",
-          borderRadius: 14,
-          padding: "6px",
-          zIndex: 50,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1)",
+          position: "absolute", top: "calc(100% + 6px)", left: 0, width: '100%', minWidth: 200,
+          background: "var(--modal-bg)", border: "1px solid var(--card-border)",
+          borderRadius: 14, padding: "6px", zIndex: 1000,
+          boxShadow: "0 12px 30px rgba(0,0,0,0.2)",
           backdropFilter: "blur(20px)",
-          animation: "dropdownSlide 0.18s ease-out",
+          maxHeight: 250,
+          overflowY: 'auto'
         }}>
           {items.map((item) => {
-            const isActive = item.value === value;
+            const isSelected = item.value === value;
             return (
               <button
                 key={item.value}
+                type="button"
                 onClick={() => { onSelect(item.value); setIsOpen(false); }}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  width: "100%",
-                  padding: "10px 14px",
-                  border: "none",
-                  borderRadius: 10,
-                  background: isActive ? "rgba(99, 102, 241, 0.1)" : "transparent",
-                  color: isActive ? "var(--accent-primary)" : "var(--foreground)",
-                  fontSize: 13,
-                  fontWeight: isActive ? 600 : 500,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  fontFamily: "inherit",
-                  transition: "all 0.15s ease",
+                  display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px",
+                  border: "none", borderRadius: 10, 
+                  background: isSelected ? "var(--accent-primary)" : "transparent",
+                  color: isSelected ? "#fff" : "var(--text-secondary)",
+                  fontSize: 14, fontWeight: isSelected ? 600 : 500, cursor: "pointer", textAlign: "left",
+                  transition: "all 0.15s ease", textTransform: 'capitalize'
                 }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = "rgba(99, 115, 171, 0.06)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = "transparent";
-                  }
-                }}
+                onMouseEnter={(e) => { if(!isSelected) { e.currentTarget.style.background = "rgba(99, 115, 171, 0.08)"; e.currentTarget.style.color = "var(--foreground)"; } }}
+                onMouseLeave={(e) => { if(!isSelected) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-secondary)"; } }}
               >
-                {/* Check mark for active item */}
-                <span style={{
-                  width: 18, height: 18, borderRadius: 6, flexShrink: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: isActive ? "var(--accent-primary)" : "rgba(99, 115, 171, 0.08)",
-                  transition: "all 0.15s ease",
-                }}>
-                  {isActive && (
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </span>
                 {item.label}
               </button>
             );
@@ -152,447 +103,338 @@ function CustomDropdown({ icon, label, items, value, onSelect }: CustomDropdownP
   );
 }
 
-// ========== DUMMY DATA ==========
-const PRODUCT_GRADIENTS = [
-  "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%)",
-  "linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)",
-  "linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #6366f1 100%)",
-  "linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #3b82f6 100%)",
-  "linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ef4444 100%)",
-  "linear-gradient(135deg, #ec4899 0%, #8b5cf6 50%, #6366f1 100%)",
-  "linear-gradient(135deg, #14b8a6 0%, #10b981 50%, #22c55e 100%)",
-  "linear-gradient(135deg, #f97316 0%, #ef4444 50%, #ec4899 100%)",
-  "linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #f43f5e 100%)",
-  "linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #a855f7 100%)",
-];
-
-const PRODUCT_ICONS = ["📦", "🎧", "💻", "📱", "⌚", "🎮", "📸", "🖥️", "🎒", "👟"];
-
-const CATEGORIES = ["Electronics", "Accessories", "Clothing", "Home & Living", "Food & Beverage"];
-
-const DUMMY_PRODUCTS: Product[] = [
-  {
-    id: "p1", name: "Premium Wireless Headphones", description: "High-fidelity sound with active noise cancellation and 30hr battery life.",
-    price: 1299000, currency: "IDR", category: "Electronics", stock: 24, is_active: true,
-    tenant_id: "t1", created_at: "2026-03-15T08:00:00Z",
-  },
-  {
-    id: "p2", name: "Ergonomic Laptop Stand", description: "Adjustable aluminum stand for improved posture and airflow.",
-    price: 450000, currency: "IDR", category: "Accessories", stock: 56, is_active: true,
-    tenant_id: "t1", created_at: "2026-03-14T10:30:00Z",
-  },
-  {
-    id: "p3", name: "Smart Fitness Watch", description: "Heart rate monitor, GPS tracking, sleep analysis with AMOLED display.",
-    price: 2150000, currency: "IDR", category: "Electronics", stock: 8, is_active: true,
-    tenant_id: "t1", created_at: "2026-03-13T14:00:00Z",
-  },
-  {
-    id: "p4", name: "Organic Matcha Powder", description: "Premium ceremonial-grade matcha imported from Uji, Kyoto.",
-    price: 185000, currency: "IDR", category: "Food & Beverage", stock: 120, is_active: true,
-    tenant_id: "t1", created_at: "2026-03-12T09:15:00Z",
-  },
-  {
-    id: "p5", name: "Minimalist Canvas Backpack", description: "Water-resistant urban backpack with laptop compartment.",
-    price: 375000, currency: "IDR", category: "Accessories", stock: 0, is_active: false,
-    tenant_id: "t1", created_at: "2026-03-11T16:45:00Z",
-  },
-  {
-    id: "p6", name: "Artisan Ceramic Mug Set", description: "Handcrafted set of 4 mugs with unique glaze patterns.",
-    price: 280000, currency: "IDR", category: "Home & Living", stock: 32, is_active: true,
-    tenant_id: "t1", created_at: "2026-03-10T11:00:00Z",
-  },
-  {
-    id: "p7", name: "Running Shoes Ultra Boost", description: "Lightweight responsive cushioning for daily training.",
-    price: 1780000, currency: "IDR", category: "Clothing", stock: 3, is_active: true,
-    tenant_id: "t1", created_at: "2026-03-09T13:30:00Z",
-  },
-  {
-    id: "p8", name: "Portable Bluetooth Speaker", description: "360° surround sound, waterproof IPX7, 20hr playtime.",
-    price: 890000, currency: "IDR", category: "Electronics", stock: 45, is_active: true,
-    tenant_id: "t1", created_at: "2026-03-08T08:20:00Z",
-  },
-  {
-    id: "p9", name: "Vintage Denim Jacket", description: "Classic wash with modern fit, organic cotton.",
-    price: 650000, currency: "IDR", category: "Clothing", stock: 15, is_active: true,
-    tenant_id: "t1", created_at: "2026-03-07T15:00:00Z",
-  },
-  {
-    id: "p10", name: "Smart LED Desk Lamp", description: "Touch-controlled, color temperature adjustable, USB charging port.",
-    price: 520000, currency: "IDR", category: "Home & Living", stock: 0, is_active: false,
-    tenant_id: "t1", created_at: "2026-03-06T10:30:00Z",
-  },
-];
-
 // ========== HELPERS ==========
-function formatCurrency(amount: number, currency: string) {
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency, minimumFractionDigits: 0 }).format(amount);
-}
+const CATEGORIES = ["pet", "electronics", "accessories", "clothing", "food", "other"];
+const GRADIENTS = [
+    "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+    "linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%)",
+    "linear-gradient(135deg, #f43f5e 0%, #fb923c 100%)"
+];
 
-function getStockInfo(stock: number) {
-  if (stock === 0) return { label: "Out of Stock", className: "stock-out" };
-  if (stock <= 10) return { label: `Low Stock (${stock})`, className: "stock-low" };
-  return { label: `In Stock (${stock})`, className: "stock-in" };
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 }
-
-type SortOption = "name-asc" | "name-desc" | "price-asc" | "price-desc" | "newest" | "oldest";
 
 export default function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [showModal, setShowModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    name: "", description: "", category: "pet", price: 0, stock: 0, image_url: "", is_active: true,
+    metadata: {}
+  });
+
+  const loadProducts = async () => {
+    setLoading(true);
+    const res = await fetchProducts();
+    if (res.success) setProducts(res.data);
+    else showToast("error", res.error || "Failed to load products");
+    setLoading(false);
+  };
+
+  useEffect(() => { loadProducts(); }, []);
 
   const filteredProducts = useMemo(() => {
-    let result = [...DUMMY_PRODUCTS];
-
-    // Search
+    let result = [...products];
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (p) => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)
-      );
+      result = result.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q));
     }
-
-    // Category
-    if (selectedCategory !== "all") {
-      result = result.filter((p) => p.category === selectedCategory);
-    }
-
-    // Sort
+    if (selectedCategory !== "all") result = result.filter(p => p.category === selectedCategory);
+    
     switch (sortBy) {
-      case "name-asc": result.sort((a, b) => a.name.localeCompare(b.name)); break;
-      case "name-desc": result.sort((a, b) => b.name.localeCompare(a.name)); break;
+      case "newest": result.sort((a, b) => new Date(b.created_at || "").getTime() - new Date(a.created_at || "").getTime()); break;
       case "price-asc": result.sort((a, b) => a.price - b.price); break;
       case "price-desc": result.sort((a, b) => b.price - a.price); break;
-      case "newest": result.sort((a, b) => new Date(b.created_at || "").getTime() - new Date(a.created_at || "").getTime()); break;
-      case "oldest": result.sort((a, b) => new Date(a.created_at || "").getTime() - new Date(b.created_at || "").getTime()); break;
     }
-
     return result;
-  }, [searchQuery, selectedCategory, sortBy]);
+  }, [products, searchQuery, selectedCategory, sortBy]);
 
-  const handleAddProduct = () => {
-    showToast("info", "Product creation coming soon! This is a mockup.");
+  const handleOpenModal = (product?: Product) => {
+    if (product) {
+      setEditingProduct(product);
+      setFormData({
+        name: product.name, description: product.description, category: product.category,
+        price: product.price, stock: product.stock, image_url: product.image_url || "", is_active: product.is_active,
+        metadata: (product as any).metadata || {}
+      });
+    } else {
+      setEditingProduct(null);
+      setFormData({ name: "", description: "", category: "pet", price: 0, stock: 0, image_url: "", is_active: true, metadata: {} });
+    }
+    setShowModal(true);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fd = new FormData();
+    fd.append("file", file);
+
+    setSubmitting(true);
+    const res = await uploadProductImage(fd);
+    if (res.success) {
+      setFormData(prev => ({ ...prev, image_url: res.data.image_url }));
+      showToast("success", "Image updated");
+    } else {
+      showToast("error", res.error || "Upload failed");
+    }
+    setSubmitting(false);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    const res = editingProduct 
+      ? await updateProduct(editingProduct.id, formData)
+      : await createProduct(formData);
+
+    if (res.success) {
+      showToast("success", editingProduct ? "Product updated" : "Product created");
+      setShowModal(false);
+      loadProducts();
+    } else {
+      showToast("error", res.error || "Failed to save product");
+    }
+    setSubmitting(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    const confirm = await showConfirm("Delete Product", "Are you sure?");
+    if (!confirm.isConfirmed) return;
+    const res = await deleteProduct(id);
+    if (res.success) {
+      showToast("success", "Deleted");
+      loadProducts();
+    }
   };
 
   return (
     <div style={{ minHeight: "100vh", padding: "32px 24px" }}>
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
 
-        {/* ===== HEADER ===== */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
+        {/* HEADER */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-                My Products
-              </h1>
-              <span className="badge badge-count" style={{ fontSize: 13 }}>
-                {filteredProducts.length}
-              </span>
-            </div>
-            <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: 0 }}>
-              Manage and showcase your product catalog
-            </p>
+            <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>My Products</h1>
+            <p style={{ color: "var(--text-secondary)", margin: 0 }}>Manage your product catalog</p>
           </div>
-          <button className="btn-primary" onClick={handleAddProduct}>
-            <PlusIcon />
-            Add Product
+          <button className="btn-primary" onClick={() => handleOpenModal()} style={{ padding: '10px 20px', borderRadius: 12 }}>
+            <PlusIcon /> Add Product
           </button>
         </div>
 
-        {/* ===== TOOLBAR: Search + Filters + View Toggle ===== */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: 12, marginBottom: 24,
-          flexWrap: "wrap",
-          padding: "16px 20px",
-          background: "rgba(99, 115, 171, 0.04)",
-          borderRadius: 14,
-          border: "1px solid var(--card-border)",
+        {/* TOOLBAR */}
+        <div style={{ 
+            display: "flex", gap: 12, marginBottom: 24, padding: "12px 16px", 
+            background: "var(--card-bg)", borderRadius: 16, border: "1px solid var(--card-border)",
+            alignItems: 'center'
         }}>
-          {/* Search */}
-          <div className="product-search-bar">
-            <span className="search-icon"><SearchIcon /></span>
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="search-box">
+            <SearchIcon />
+            <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
 
-          {/* Category Filter — Custom Dropdown */}
           <CustomDropdown
-            icon={
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-              </svg>
-            }
-            label={selectedCategory === "all" ? "All Categories" : selectedCategory}
-            items={[
-              { value: "all", label: "All Categories" },
-              ...CATEGORIES.map((c) => ({ value: c, label: c })),
-            ]}
+            label="Category"
+            items={[{ value: "all", label: "All Categories" }, ...CATEGORIES.map(c => ({ value: c, label: c }))]}
             value={selectedCategory}
             onSelect={setSelectedCategory}
           />
 
-          {/* Sort — Custom Dropdown */}
-          <CustomDropdown
-            icon={
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <polyline points="19 12 12 19 5 12" />
-              </svg>
-            }
-            label={
-              { newest: "Newest", oldest: "Oldest", "price-asc": "Price ↑", "price-desc": "Price ↓", "name-asc": "A → Z", "name-desc": "Z → A" }[sortBy]
-            }
-            items={[
-              { value: "newest", label: "Newest First" },
-              { value: "oldest", label: "Oldest First" },
-              { value: "price-asc", label: "Price: Low → High" },
-              { value: "price-desc", label: "Price: High → Low" },
-              { value: "name-asc", label: "Name: A → Z" },
-              { value: "name-desc", label: "Name: Z → A" },
-            ]}
-            value={sortBy}
-            onSelect={(v) => setSortBy(v as SortOption)}
-          />
-
-          {/* View Toggle */}
-          <div className="view-toggle" style={{ marginLeft: "auto" }}>
-            <button
-              className={viewMode === "grid" ? "active" : ""}
-              onClick={() => setViewMode("grid")}
-              title="Grid View"
-            >
-              <GridIcon />
-            </button>
-            <button
-              className={viewMode === "list" ? "active" : ""}
-              onClick={() => setViewMode("list")}
-              title="List View"
-            >
-              <ListIcon />
-            </button>
+          <div className="view-selector">
+            <button className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')}><GridIcon /></button>
+            <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}><ListIcon /></button>
           </div>
         </div>
 
-        {/* ===== GRID VIEW ===== */}
-        {viewMode === "grid" && filteredProducts.length > 0 && (
-          <div className="product-grid">
-            {filteredProducts.map((product, idx) => {
-              const stockInfo = getStockInfo(product.stock);
-              const gradient = PRODUCT_GRADIENTS[idx % PRODUCT_GRADIENTS.length];
-              const icon = PRODUCT_ICONS[idx % PRODUCT_ICONS.length];
-              return (
-                <div key={product.id} className="product-card">
-                  {/* Image / Gradient Placeholder */}
-                  <div className="product-card-image">
-                    <div className="product-card-image-gradient" style={{ background: gradient }}>
-                      <span style={{ fontSize: 52, zIndex: 1, filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.2))" }}>
-                        {icon}
-                      </span>
+        {/* CONTENT */}
+        {loading ? (
+            <div style={{ textAlign: 'center', padding: 100, color: 'var(--text-secondary)' }}>Loading...</div>
+        ) : filteredProducts.length > 0 ? (
+          <div className={viewMode === 'grid' ? "product-grid-refined" : "product-list-refined"}>
+            {filteredProducts.map((p, idx) => (
+                viewMode === 'grid' ? (
+                  <div key={p.id} className="premium-product-card">
+                    <div className="card-media" style={{ background: p.image_url ? `url(${p.image_url}) center/cover` : GRADIENTS[idx % GRADIENTS.length] }}>
+                        {!p.image_url && <div style={{ fontSize: 40 }}>📦</div>}
+                        <div className="card-glass-actions">
+                            <button className="edit-glass" onClick={() => handleOpenModal(p)}><EditIcon /></button>
+                            <button className="delete-glass" onClick={() => handleDelete(p.id)}><TrashIcon /></button>
+                        </div>
                     </div>
-                    {/* Status Badge */}
-                    <div style={{
-                      position: "absolute", top: 12, right: 12, zIndex: 2,
-                    }}>
-                      <span className="badge" style={{
-                        background: product.is_active ? "rgba(34,197,94,0.85)" : "rgba(239,68,68,0.85)",
-                        color: "#fff",
-                        fontSize: 11,
-                        fontWeight: 600,
-                        backdropFilter: "blur(8px)",
-                      }}>
-                        {product.is_active ? "Active" : "Inactive"}
-                      </span>
+                    <div className="card-content">
+                        <div className="card-meta">
+                            <span className="cat-tag">{p.category}</span>
+                            <span className="stock-tag">Stock: {p.stock}</span>
+                        </div>
+                        <h3 className="card-name">{p.name}</h3>
+                        <p className="card-description">{p.description}</p>
+                        <div className="card-footer">
+                            <span className="price-tag">{formatCurrency(p.price)}</span>
+                        </div>
                     </div>
                   </div>
-
-                  {/* Body */}
-                  <div className="product-card-body">
-                    {/* Category */}
-                    <span className="badge" style={{
-                      background: "rgba(99, 102, 241, 0.1)",
-                      color: "var(--accent-primary)",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      marginBottom: 8,
-                    }}>
-                      {product.category}
-                    </span>
-
-                    {/* Name */}
-                    <h3 style={{
-                      fontSize: 16, fontWeight: 600, color: "var(--foreground)",
-                      margin: "8px 0 6px", lineHeight: 1.3,
-                      overflow: "hidden", textOverflow: "ellipsis",
-                      display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-                    }}>
-                      {product.name}
-                    </h3>
-
-                    {/* Description */}
-                    <p style={{
-                      fontSize: 13, color: "var(--text-secondary)", margin: "0 0 12px",
-                      lineHeight: 1.5,
-                      overflow: "hidden", textOverflow: "ellipsis",
-                      display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
-                    }}>
-                      {product.description}
-                    </p>
-
-                    {/* Price + Stock */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
-                      <span style={{
-                        fontSize: 18, fontWeight: 700, color: "var(--accent-primary)",
-                        letterSpacing: "-0.01em",
-                      }}>
-                        {formatCurrency(product.price, product.currency)}
-                      </span>
-                      <span style={{
-                        display: "flex", alignItems: "center", fontSize: 12,
-                        color: "var(--text-secondary)", fontWeight: 500,
-                      }}>
-                        <span className={`stock-dot ${stockInfo.className}`} />
-                        {stockInfo.label}
-                      </span>
+                ) : (
+                    <div key={p.id} className="premium-list-item">
+                        <div className="list-media" style={{ background: p.image_url ? `url(${p.image_url}) center/cover` : GRADIENTS[idx % GRADIENTS.length] }}></div>
+                        <div className="list-info" style={{ flex: 1 }}>
+                            <h4 style={{ margin: 0 }}>{p.name}</h4>
+                            <span className="cat-tag" style={{ marginTop: 4 }}>{p.category}</span>
+                        </div>
+                        <div style={{ textAlign: 'right', minWidth: 120 }}>
+                            <div style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>{formatCurrency(p.price)}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Stock: {p.stock}</div>
+                        </div>
+                        <div className="list-actions">
+                            <button onClick={() => handleOpenModal(p)}><EditIcon /></button>
+                            <button className="delete" onClick={() => handleDelete(p.id)}><TrashIcon /></button>
+                        </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
+                )
+            ))}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: 80, border: '2px dashed var(--border-color)', borderRadius: 24, background: 'var(--card-bg)' }}>
+            <h3>No products found</h3>
+            <button className="btn-primary" onClick={() => handleOpenModal()} style={{ marginTop: 16 }}>Add Product</button>
           </div>
         )}
 
-        {/* ===== LIST VIEW ===== */}
-        {viewMode === "list" && filteredProducts.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {/* Header */}
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "60px 1fr 120px 100px 80px",
-              gap: 16,
-              padding: "10px 20px",
-              fontSize: 12,
-              fontWeight: 600,
-              color: "var(--text-tertiary)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}>
-              <span></span>
-              <span>Product</span>
-              <span>Price</span>
-              <span>Stock</span>
-              <span>Status</span>
-            </div>
-            {filteredProducts.map((product, idx) => {
-              const stockInfo = getStockInfo(product.stock);
-              const gradient = PRODUCT_GRADIENTS[idx % PRODUCT_GRADIENTS.length];
-              const icon = PRODUCT_ICONS[idx % PRODUCT_ICONS.length];
-              return (
-                <div key={product.id} className="product-list-row">
-                  {/* Thumbnail */}
-                  <div className="product-list-thumb" style={{ background: gradient }}>
-                    <span>{icon}</span>
-                  </div>
-
-                  {/* Info */}
-                  <div style={{ minWidth: 0 }}>
-                    <h4 style={{
-                      fontSize: 14, fontWeight: 600, margin: 0,
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    }}>
-                      {product.name}
-                    </h4>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                      <span className="badge" style={{
-                        background: "rgba(99, 102, 241, 0.1)", color: "var(--accent-primary)",
-                        fontSize: 10, fontWeight: 600,
-                      }}>
-                        {product.category}
-                      </span>
-                      <span style={{
-                        fontSize: 12, color: "var(--text-tertiary)",
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      }}>
-                        {product.description}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Price */}
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--accent-primary)" }}>
-                    {formatCurrency(product.price, product.currency)}
-                  </span>
-
-                  {/* Stock */}
-                  <span style={{ display: "flex", alignItems: "center", fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 }}>
-                    <span className={`stock-dot ${stockInfo.className}`} />
-                    {product.stock}
-                  </span>
-
-                  {/* Status */}
-                  <span className="badge" style={{
-                    background: product.is_active ? "var(--accent-green-bg)" : "var(--accent-red-bg)",
-                    color: product.is_active ? "var(--accent-green)" : "var(--accent-red)",
-                    fontSize: 11, fontWeight: 600, justifyContent: "center",
-                  }}>
-                    {product.is_active ? "Active" : "Inactive"}
-                  </span>
+        {/* MODAL */}
+        {showModal && (
+          <div className="modal-overlay">
+            <div className="modal-content-premium" style={{ maxWidth: 540, padding: 0, overflow: 'hidden' }}>
+              <div className="modal-header" style={{ padding: '24px 32px 16px', marginBottom: 0 }}>
+                <div>
+                    <h2 style={{ fontSize: 20 }}>{editingProduct ? "Edit Product" : "New Product"}</h2>
                 </div>
-              );
-            })}
-          </div>
-        )}
+                <button className="close-btn" onClick={() => setShowModal(false)}><CloseIcon /></button>
+              </div>
 
-        {/* ===== EMPTY STATE ===== */}
-        {filteredProducts.length === 0 && (
-          <div style={{
-            textAlign: "center", padding: "80px 20px",
-            background: "rgba(99, 115, 171, 0.08)", borderRadius: 16,
-            border: "2px dashed rgba(99, 115, 171, 0.2)",
-          }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: 20,
-              background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 24px", fontSize: 32,
-            }}>
-              📦
+              <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', padding: '0 32px 32px' }}>
+                <form onSubmit={handleSubmit} className="modal-form">
+                    <div className="form-group full">
+                        <label>Product Name</label>
+                        <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Cat Food" />
+                    </div>
+                    
+                    <div className="form-group full">
+                        <label>Description</label>
+                        <textarea rows={2} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Details..." />
+                    </div>
+
+                    <div className="form-row" style={{ gridTemplateColumns: '1.2fr 1fr', gap: 16 }}>
+                        <div className="form-group">
+                            <label>Category</label>
+                            <CustomDropdown
+                                label="Select"
+                                items={CATEGORIES.map(c => ({ value: c, label: c }))}
+                                value={formData.category}
+                                onSelect={v => setFormData({...formData, category: v})}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Price (IDR)</label>
+                            <input type="number" required value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} />
+                        </div>
+                    </div>
+
+                    <div className="form-row" style={{ gridTemplateColumns: '1fr 1.2fr', gap: 16 }}>
+                        <div className="form-group">
+                            <label>Stock</label>
+                            <input type="number" required value={formData.stock} onChange={e => setFormData({...formData, stock: Number(e.target.value)})} />
+                        </div>
+                        <div className="form-group" style={{ justifyContent: 'center' }}>
+                            <div className="toggle-group" style={{ height: 'auto', marginTop: 10 }}>
+                                <input type="checkbox" id="visibility-toggle" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} />
+                                <label htmlFor="visibility-toggle" style={{ fontSize: 13, fontWeight: 500 }}>Active in store</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="form-group full">
+                        <label>Product Image</label>
+                        <div className="upload-zone" style={{ padding: 12 }}>
+                            <div className="preview-area" style={{ width: 60, height: 60, background: formData.image_url ? `url(${formData.image_url}) center/cover` : 'rgba(99, 115, 171, 0.05)' }}>
+                                {!formData.image_url && <span style={{ fontSize: 10 }}>No Image</span>}
+                            </div>
+                            <div className="upload-controls">
+                                <label className="upload-btn" style={{ padding: '8px 14px' }}>
+                                    {submitting ? "..." : "Upload Image"}
+                                    <input type="file" accept="image/*" onChange={handleFileUpload} disabled={submitting} />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+                        <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</button>
+                        <button type="submit" className="btn-primary" style={{ flex: 1.5 }} disabled={submitting}>
+                            {submitting ? "Saving..." : "Save Product"}
+                            {!submitting && <ChevronRightIcon />}
+                        </button>
+                    </div>
+                </form>
+              </div>
             </div>
-            <h3 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 8px 0" }}>
-              {searchQuery || selectedCategory !== "all"
-                ? "No Products Found"
-                : "No Products Yet"}
-            </h3>
-            <p style={{
-              color: "var(--text-secondary)", margin: "0 0 24px 0",
-              fontSize: 15, maxWidth: 400, marginInline: "auto",
-            }}>
-              {searchQuery || selectedCategory !== "all"
-                ? "Try adjusting your search or filter to find what you're looking for."
-                : "Start building your product catalog by adding your first product."}
-            </p>
-            {!searchQuery && selectedCategory === "all" && (
-              <button className="btn-primary" onClick={handleAddProduct}>
-                <PlusIcon />
-                Add Your First Product
-              </button>
-            )}
-            {(searchQuery || selectedCategory !== "all") && (
-              <button
-                className="btn-secondary"
-                onClick={() => { setSearchQuery(""); setSelectedCategory("all"); }}
-              >
-                Clear Filters
-              </button>
-            )}
           </div>
         )}
 
       </div>
+      
+      <style jsx>{`
+        .product-grid-refined { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+        .premium-product-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; overflow: hidden; transition: 0.3s; }
+        .premium-product-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+        .card-media { height: 180px; position: relative; display: flex; align-items: center; justify-content: center; background-size: cover; background-position: center; }
+        .card-glass-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; opacity: 0; transition: 0.2s; }
+        .premium-product-card:hover .card-glass-actions { opacity: 1; }
+        .edit-glass, .delete-glass { width: 32px; height: 32px; border-radius: 8px; border: none; background: rgba(255,255,255,0.8); backdrop-filter: blur(4px); cursor: pointer; color: #333; display: flex; align-items: center; justify-content: center; }
+        .delete-glass:hover { background: #ef4444; color: #fff; }
+        .card-content { padding: 16px; }
+        .card-meta { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .cat-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--accent-primary); background: rgba(99, 102, 241, 0.1); padding: 3px 6px; border-radius: 4px; }
+        .stock-tag { font-size: 10px; color: var(--text-tertiary); }
+        .card-name { font-size: 16px; font-weight: 700; margin: 0 0 4px; color: var(--foreground); }
+        .card-description { font-size: 13px; color: var(--text-secondary); line-height: 1.4; height: 36px; overflow: hidden; margin-bottom: 12px; }
+        .price-tag { font-size: 18px; font-weight: 800; color: var(--accent-primary); }
+        .search-box { flex: 1; position: relative; display: flex; align-items: center; }
+        .search-box :global(svg) { position: absolute; left: 12px; color: var(--text-tertiary); }
+        .search-box input { width: 100%; padding: 10px 14px 10px 38px; border-radius: 10px; border: 1.5px solid var(--input-border); background: var(--input-bg); color: var(--foreground); font-size: 14px; }
+        .view-selector { display: flex; background: rgba(99, 115, 171, 0.08); padding: 4px; border-radius: 10px; }
+        .view-selector button { background: transparent; border: none; padding: 6px; border-radius: 6px; cursor: pointer; color: var(--text-tertiary); }
+        .view-selector button.active { background: #fff; color: var(--accent-primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content-premium { background: var(--modal-bg); border: 1px solid var(--card-border); border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); animation: pop 0.2s ease-out; }
+        @keyframes pop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; }
+        .close-btn { background: transparent; border: none; padding: 4px; cursor: pointer; color: var(--text-tertiary); }
+        .modal-form { display: grid; gap: 16px; }
+        .form-section { display: grid; gap: 12px; }
+        .form-row { display: grid; gap: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+        .form-group input, .form-group textarea { padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--input-border); background: var(--input-bg); color: var(--foreground); font-size: 14px; outline: none; transition: 0.2s; }
+        .form-group input:focus { border-color: var(--accent-primary); }
+        .premium-list-item { display: flex; align-items: center; gap: 16px; padding: 12px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; margin-bottom: 8px; }
+        .list-media { width: 44px; height: 44px; border-radius: 8px; flex-shrink: 0; }
+        .list-actions { display: flex; gap: 8px; }
+        .list-actions button { background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 6px; cursor: pointer; color: var(--text-secondary); }
+        .list-actions button.delete:hover { background: var(--accent-red-bg); color: var(--accent-red); }
+        .upload-zone { display: flex; gap: 12px; background: rgba(99, 115, 171, 0.05); border: 1.5px dashed var(--border-color); border-radius: 12px; align-items: center; }
+        .upload-btn { display: inline-block; background: var(--foreground); color: var(--background); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; }
+        .upload-btn input { display: none; }
+        .toggle-group { display: flex; align-items: center; gap: 8px; }
+      `}</style>
     </div>
   );
 }

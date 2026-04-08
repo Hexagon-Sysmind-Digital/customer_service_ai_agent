@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { logout } from "@/app/actions/auth";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import { useState, useEffect } from "react";
-import { BotIcon, UserIcon, FaqIcon, KnowledgeIcon, ActionIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, MenuIcon, CreditCardIcon, ChatIcon, AlertCircleIcon, DashboardIcon, PackageIcon } from "@/components/icons";
+import { BotIcon, UserIcon, FaqIcon, KnowledgeIcon, ActionIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, MenuIcon, CreditCardIcon, ChatIcon, AlertCircleIcon, DashboardIcon, PackageIcon, GlobeIcon } from "@/components/icons";
 import { getMe } from "@/app/actions/auth";
 import { User } from "@/types";
 import { showToast, showConfirm } from "@/lib/swal";
@@ -91,7 +91,6 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const navItems = [
     { label: "Dashboard", path: "/dashboard", icon: DashboardIcon },
     { label: "Tenants", path: "/tenants", icon: BotIcon, hideForRole: ["user"] },
-    { label: "Profile", path: "/profile", icon: UserIcon, showForRole: ["user"] },
     { label: "Products", path: "/products", icon: PackageIcon, showForRole: ["user"] },
     { label: "Users", path: "/users", icon: UserIcon, hideForRole: ["user"] },
     { label: "FAQs", path: "/faqs", icon: FaqIcon },
@@ -104,6 +103,10 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     { label: "Sessions", path: "/sessions", icon: ChatIcon },
     { label: "Errors", path: "/error-management", icon: AlertCircleIcon, hideForRole: ["user"] },
     { label: "Credits", path: "/credits", icon: CreditCardIcon, hideForRole: ["user"] },
+    { label: "Payments", path: "/payments", icon: CreditCardIcon, hideForRole: ["user"] },
+    { label: "Integrations", path: "/integrations", icon: GlobeIcon, showForRole: ["user"] },
+    { label: "Billing", path: "/billing", icon: CreditCardIcon, showForRole: ["user"] },
+    { label: "Profile", path: "/profile", icon: UserIcon, showForRole: ["user"] },
   ].filter(item => {
     const hide = (item as any).hideForRole;
     const show = (item as any).showForRole;
