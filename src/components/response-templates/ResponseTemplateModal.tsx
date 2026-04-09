@@ -147,7 +147,6 @@ export default function ResponseTemplateModal({ tenantId, template, fixedLang, o
               <input
                 type="text"
                 className="form-input"
-                placeholder="e.g. greeting"
                 value={formData.key}
                 onChange={(e) => setFormData(prev => ({ ...prev, key: e.target.value }))}
                 required

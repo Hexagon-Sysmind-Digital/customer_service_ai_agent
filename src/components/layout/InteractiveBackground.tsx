@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo } from "react";
 
-export default function InteractiveBackground() {
+// Memo prevents re-renders from parent (Sidebar) state changes
+const InteractiveBackground = memo(function InteractiveBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -16,14 +17,21 @@ export default function InteractiveBackground() {
     let particles: Particle[] = [];
     
     // Konfigurasi Partikel
-    const particleCount = 80;
+    const particleCount = 60; // Turunkan dari 80 untuk performa lebih baik
     const connectionDistance = 130;
     const mouseRadius = 180;
     
-    const getThemeColor = () => {
-      const isLight = document.documentElement.getAttribute("data-theme") === "light";
-      return isLight ? 99 : 139; // RGB R value as base determining light vs dark (99=indigo, 139=purple)
-    };
+    // Cache theme color — hanya update saat theme berubah, bukan setiap frame
+    let cachedIsLight = document.documentElement.getAttribute("data-theme") === "light";
+    
+    const themeObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.attributeName === "data-theme") {
+          cachedIsLight = document.documentElement.getAttribute("data-theme") === "light";
+        }
+      }
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
     let mouse = { x: -1000, y: -1000 };
 
@@ -52,8 +60,7 @@ export default function InteractiveBackground() {
 
       draw() {
         if (!ctx) return;
-        const colorBase = getThemeColor();
-        ctx.fillStyle = colorBase === 99 ? "rgba(99, 102, 241, 0.4)" : "rgba(168, 85, 247, 0.4)";
+        ctx.fillStyle = cachedIsLight ? "rgba(99, 102, 241, 0.4)" : "rgba(168, 85, 247, 0.4)";
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
@@ -71,9 +78,8 @@ export default function InteractiveBackground() {
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const colorBase = getThemeColor();
-      const rgb = colorBase === 99 ? "99, 102, 241" : "139, 92, 246"; // Indigo for light, Purple for dark
-      const connectColor = colorBase === 99 ? "168, 85, 247" : "99, 102, 241"; // Secondary color
+      const rgb = cachedIsLight ? "99, 102, 241" : "139, 92, 246";
+      const connectColor = cachedIsLight ? "168, 85, 247" : "99, 102, 241";
       
       for (let i = 0; i < particles.length; i++) {
         particles[i].update();
@@ -125,8 +131,13 @@ export default function InteractiveBackground() {
     init();
     animate();
 
+    // Debounce resize agar tidak reinit terlalu sering
+    let resizeTimeout: ReturnType<typeof setTimeout>;
     const handleResize = () => {
-      init();
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        init();
+      }, 200);
     };
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -148,6 +159,8 @@ export default function InteractiveBackground() {
       window.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseleave", handleMouseLeave);
       cancelAnimationFrame(animationFrameId);
+      clearTimeout(resizeTimeout);
+      themeObserver.disconnect();
     };
   }, []);
 
@@ -156,4 +169,6 @@ export default function InteractiveBackground() {
       <canvas ref={canvasRef} className="main-particles-container" />
     </div>
   );
-}
+});
+
+export default InteractiveBackground;

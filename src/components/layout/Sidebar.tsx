@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { logout } from "@/app/actions/auth";
 import ThemeToggle from "@/components/layout/ThemeToggle";
-import { useState, useEffect } from "react";
-import { BotIcon, UserIcon, FaqIcon, KnowledgeIcon, ActionIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, MenuIcon, CreditCardIcon, ChatIcon, AlertCircleIcon, DashboardIcon, PackageIcon, GlobeIcon } from "@/components/icons";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { BotIcon, UserIcon, FaqIcon, KnowledgeIcon, ActionIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, MenuIcon, CreditCardIcon, ChatIcon, AlertCircleIcon, DashboardIcon, PackageIcon, GlobeIcon, GridIcon } from "@/components/icons";
 import { getMe } from "@/app/actions/auth";
 import { User } from "@/types";
 import { showToast, showConfirm } from "@/lib/swal";
@@ -21,6 +21,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   // Baca role awal dari sessionStorage agar navItems langsung benar (hindari flash admin sidebar)
   const [initialRole, setInitialRole] = useState<string | null>(null);
+  const hasFetchedUser = useRef(false);
 
   // Sidebar collapse state - runs once on mount
   useEffect(() => {
@@ -29,20 +30,23 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     setIsMounted(true);
   }, []);
 
-  // Re-fetch user when pathname changes (handles role switch after logout+login)
+  // Fetch user ONCE on mount (not on every pathname change)
   useEffect(() => {
-    // If on login page, clear user state so stale role doesn't linger
     if (pathname === "/" || pathname === "/login") {
       setUser(null);
       setInitialRole(null);
+      hasFetchedUser.current = false;
       return;
     }
 
-    // Baca role dari sessionStorage sebagai nilai awal agar navItems langsung benar
+    // Baca role dari sessionStorage sebagai fallback awal
     const storedRole = sessionStorage.getItem("user_role");
-    if (storedRole) setInitialRole(storedRole);
+    if (storedRole && !initialRole) setInitialRole(storedRole);
+
+    // Hanya fetch sekali, tidak setiap kali navigasi
+    if (hasFetchedUser.current) return;
+    hasFetchedUser.current = true;
     
-    // Fetch user profile (update role setelah data lengkap)
     const fetchUser = async () => {
       const res = await getMe();
       if (res.success) {
@@ -51,7 +55,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
       }
     };
     fetchUser();
-  }, [pathname]);
+  }, [pathname, initialRole]);
 
   const toggleSidebar = () => {
     const newState = !isCollapsed;
@@ -91,6 +95,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
   const navItems = [
     { label: "Dashboard", path: "/dashboard", icon: DashboardIcon },
     { label: "Tenants", path: "/tenants", icon: BotIcon, hideForRole: ["user"] },
+    { label: "Models", path: "/models", icon: GridIcon, hideForRole: ["user"] },
     { label: "Products", path: "/products", icon: PackageIcon, showForRole: ["user"] },
     { label: "Users", path: "/users", icon: UserIcon, hideForRole: ["user"] },
     { label: "FAQs", path: "/faqs", icon: FaqIcon },
@@ -101,6 +106,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     { label: "Reservations", path: "/reservations", icon: CalendarIcon },
     { label: "Chat", path: "/chat", icon: ChatIcon },
     { label: "Sessions", path: "/sessions", icon: ChatIcon },
+    { label: "Calendar", path: "/calendar", icon: CalendarIcon, showForRole: ["user"] },
     { label: "Errors", path: "/error-management", icon: AlertCircleIcon, hideForRole: ["user"] },
     { label: "Credits", path: "/credits", icon: CreditCardIcon, hideForRole: ["user"] },
     { label: "Payments", path: "/payments", icon: CreditCardIcon, hideForRole: ["user"] },

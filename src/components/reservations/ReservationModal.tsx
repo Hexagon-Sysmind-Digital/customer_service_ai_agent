@@ -51,7 +51,19 @@ export default function ReservationModal({
 
     setLoading(true);
     try {
-      const res = await createReservation(tenantId, formData);
+      // Convert datetime-local value ("2026-04-09T12:12") to RFC3339 ("2026-04-09T12:12:00+07:00")
+      const localDate = new Date(formData.start_time);
+      const tzOffset = -localDate.getTimezoneOffset();
+      const sign = tzOffset >= 0 ? "+" : "-";
+      const hours = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2, "0");
+      const minutes = String(Math.abs(tzOffset) % 60).padStart(2, "0");
+      const rfc3339 = formData.start_time.length === 16
+        ? `${formData.start_time}:00${sign}${hours}:${minutes}`
+        : `${formData.start_time}${sign}${hours}:${minutes}`;
+
+      const payload = { ...formData, start_time: rfc3339 };
+
+      const res = await createReservation(tenantId, payload);
       if (res.success) {
         onSuccess();
       } else {

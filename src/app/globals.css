@@ -651,11 +651,20 @@ input[type="checkbox"]:checked::after {
   background: linear-gradient(135deg, #a78bfa, #7c3aed);
 }
 
-/* Theme transition for all elements */
-*,
-*::before,
-*::after {
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+/* Theme transition — targeted only to layout elements, NOT all elements.
+   The wildcard selector (*) caused every element to animate on state changes, killing performance. */
+body,
+.sidebar-animated-bg,
+.glass-card,
+.modal-overlay,
+.modal-content,
+.btn-primary,
+.btn-secondary,
+.input-field,
+.form-input,
+.badge,
+.toast {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 /* Override transition for animated elements that shouldn't inherit the theme transition */
