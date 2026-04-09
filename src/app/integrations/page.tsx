@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { WhatsAppIcon, TelegramIcon, GlobeIcon, ChevronRightIcon, CheckIcon } from "@/components/icons";
+
+// Mock: Nanti dari BE, backend akan kirim kode string yang di-convert jadi QR
+const generateMockWACode = () => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let code = "";
+  for (let i = 0; i < 20; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+  return `2@${code},${Date.now()},${Math.floor(Math.random() * 999)},0`;
+};
 
 const INTEGRATION_STEPS = {
   whatsapp: [
@@ -20,8 +29,30 @@ const INTEGRATION_STEPS = {
 
 export default function IntegrationsPage() {
   const [showQR, setShowQR] = useState(false);
+  const [qrValue, setQrValue] = useState("");
+  const [qrExpiry, setQrExpiry] = useState(120);
   const [tgToken, setTgToken] = useState("");
   const [isConnectingTg, setIsConnectingTg] = useState(false);
+
+  // Generate QR code value & start countdown when shown
+  useEffect(() => {
+    if (!showQR) return;
+    setQrValue(generateMockWACode());
+    setQrExpiry(120);
+
+    const timer = setInterval(() => {
+      setQrExpiry((prev) => {
+        if (prev <= 1) {
+          // Regenerate code setiap 2 menit
+          setQrValue(generateMockWACode());
+          return 120;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [showQR]);
 
   const handleConnectTelegram = () => {
     if (!tgToken) return;
@@ -33,6 +64,8 @@ export default function IntegrationsPage() {
         setTgToken("");
     }, 1500);
   };
+
+  const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
   return (
     <div style={{ minHeight: "100vh", padding: "40px 24px", color: "var(--foreground)" }}>
@@ -79,39 +112,78 @@ export default function IntegrationsPage() {
                         </div>
                         
                         <div style={{ 
-                            height: 250, 
-                            background: "rgba(99, 115, 171, 0.04)", 
+                            height: 300, 
+                            background: showQR ? "#ffffff" : "rgba(99, 115, 171, 0.04)", 
                             borderRadius: 16, 
-                            border: "2px dashed var(--border-color)",
+                            border: showQR ? "1px solid #e5e7eb" : "2px dashed var(--border-color)",
                             display: "flex", 
                             flexDirection: "column",
                             alignItems: "center", 
                             justifyContent: "center",
-                            cursor: "pointer",
-                            transition: "all 0.2s ease",
+                            cursor: showQR ? "default" : "pointer",
+                            transition: "all 0.3s ease",
                             position: "relative",
                             overflow: "hidden"
                         }}
-                        onClick={() => setShowQR(true)}
-                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--accent-primary)"; e.currentTarget.style.background = "rgba(99, 102, 241, 0.04)"; }}
-                        onMouseLeave={(e) => { if(!showQR) { e.currentTarget.style.borderColor = "var(--border-color)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.04)"; } }}
+                        onClick={() => !showQR && setShowQR(true)}
+                        onMouseEnter={(e) => { if (!showQR) { e.currentTarget.style.borderColor = "#25D366"; e.currentTarget.style.background = "rgba(37, 211, 102, 0.04)"; } }}
+                        onMouseLeave={(e) => { if (!showQR) { e.currentTarget.style.borderColor = "var(--border-color)"; e.currentTarget.style.background = "rgba(99, 115, 171, 0.04)"; } }}
                         >
                             {!showQR ? (
                                 <>
                                     <div style={{ fontSize: 40, marginBottom: 12 }}>📱</div>
-                                    <span style={{ fontWeight: 600, color: "var(--accent-primary)" }}>Click to generate QR Code</span>
+                                    <span style={{ fontWeight: 600, color: "#25D366" }}>Click to generate QR Code</span>
                                     <span style={{ fontSize: 13, color: "var(--text-tertiary)", marginTop: 4 }}>Scan with your WhatsApp mobile app</span>
                                 </>
                             ) : (
                                 <div style={{ 
-                                    padding: 20, background: "#fff", borderRadius: 12, boxShadow: "0 8px 16px rgba(0,0,0,0.1)",
-                                    display: "flex", flexDirection: "column", alignItems: "center"
+                                    display: "flex", flexDirection: "column", alignItems: "center", gap: 12
                                 }}>
-                                    {/* Mock QR Code */}
-                                    <div style={{ width: 150, height: 150, background: "#000", padding: 10 }}>
-                                        <div style={{ width: "100%", height: "100%", border: "4px solid #fff", background: "repeating-conic-gradient(#fff 0% 25%, #000 0% 50%) 50% / 10px 10px" }}></div>
+                                    {/* WhatsApp logo di atas QR */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                        <div style={{ color: "#25D366" }}><WhatsAppIcon size={20} /></div>
+                                        <span style={{ fontSize: 13, fontWeight: 600, color: "#25D366" }}>WhatsApp Web</span>
                                     </div>
-                                    <span style={{ fontSize: 12, color: "#666", marginTop: 8, fontWeight: 500 }}>Valid for 2 minutes</span>
+                                    
+                                    {/* QR Code dari library */}
+                                    <div style={{ 
+                                        padding: 12, 
+                                        background: "#fff", 
+                                        borderRadius: 12, 
+                                        boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                                        border: "1px solid #f0f0f0",
+                                        position: "relative"
+                                    }}>
+                                        <QRCodeSVG 
+                                            value={qrValue}
+                                            size={160}
+                                            level="M"
+                                            bgColor="#ffffff"
+                                            fgColor="#111827"
+                                            imageSettings={{
+                                                src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2325D366'%3E%3Cpath d='M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z'/%3E%3C/svg%3E",
+                                                height: 24,
+                                                width: 24,
+                                                excavate: true,
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Countdown timer */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                        <div style={{ 
+                                            width: 8, height: 8, borderRadius: "50%", 
+                                            background: qrExpiry > 30 ? "#22c55e" : qrExpiry > 10 ? "#eab308" : "#ef4444",
+                                            animation: qrExpiry <= 10 ? "pulse 1s infinite" : "none"
+                                        }} />
+                                        <span style={{ 
+                                            fontSize: 12, 
+                                            fontWeight: 600, 
+                                            color: qrExpiry > 30 ? "#22c55e" : qrExpiry > 10 ? "#eab308" : "#ef4444" 
+                                        }}>
+                                            Expires in {formatTime(qrExpiry)}
+                                        </span>
+                                    </div>
                                 </div>
                             )}
                         </div>
