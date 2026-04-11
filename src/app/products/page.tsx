@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect, ReactNode } from "react";
 import { Product } from "@/types";
 import { PlusIcon, SearchIcon, GridIcon, ListIcon, TrashIcon, EditIcon, CloseIcon, CheckIcon, ChevronRightIcon } from "@/components/icons";
 import { showToast, showConfirm } from "@/lib/swal";
-import { fetchProducts, createProduct, updateProduct, deleteProduct, uploadProductImage } from "@/app/actions/products";
+import { fetchProducts, createProduct, updateProduct, deleteProduct } from "@/app/actions/products";
 
 // ========== CUSTOM DROPDOWN COMPONENT ==========
 interface DropdownItem { value: string; label: string; }
@@ -111,6 +111,60 @@ const GRADIENTS = [
     "linear-gradient(135deg, #f43f5e 0%, #fb923c 100%)"
 ];
 
+// ========== IMAGE COMPONENT WITH FALLBACK ==========
+function getProxiedUrl(src?: string): string | undefined {
+  if (!src) return undefined
+  // Route backend storage URLs through our server-side proxy
+  if (src.includes('triad.my.id/storage/')) {
+    return `/api/image-proxy?url=${encodeURIComponent(src)}`
+  }
+  return src
+}
+
+function SafeImage({ src, fallback, className, style }: { src?: string; fallback: string; className?: string; style?: React.CSSProperties }) {
+  const [isError, setIsError] = useState(false)
+  const proxiedSrc = getProxiedUrl(src)
+
+  useEffect(() => {
+    setIsError(false)
+    if (src) {
+      console.log(`[SafeImage] Attempting to load: ${src}`);
+      if (proxiedSrc !== src) {
+        console.log(`[SafeImage] Using Proxy URL: ${proxiedSrc}`);
+      }
+    }
+  }, [src, proxiedSrc])
+  
+  if (!src) {
+    return <div className={className} style={{ ...style, background: fallback, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ fontSize: 24, opacity: 0.3 }}>No Image</div>
+    </div>
+  }
+
+  if (isError) {
+    return <div className={className} style={{ ...style, background: fallback, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+      <div style={{ fontSize: 40, opacity: 0.5 }}>📦</div>
+      <div style={{ fontSize: 10, opacity: 0.5, color: 'white' }}>Load Failed</div>
+    </div>
+  }
+
+  return (
+    <div className={className} style={{ ...style, overflow: 'hidden' }}>
+      <img 
+        src={proxiedSrc} 
+        alt="Product" 
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+        onError={(e) => {
+          console.error(`[SafeImage] FAILED to load image:`, src);
+          console.error(`[SafeImage] Proxy used was:`, proxiedSrc);
+          setIsError(true);
+        }} 
+      />
+    </div>
+  )
+}
+
+
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount);
 }
@@ -177,17 +231,37 @@ export default function ProductsPage() {
     if (!file) return;
 
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", file); // API expects field name 'file' (confirmed from curl)
 
     setSubmitting(true);
-    const res = await uploadProductImage(fd);
-    if (res.success) {
-      setFormData(prev => ({ ...prev, image_url: res.data.image_url }));
-      showToast("success", "Image updated");
-    } else {
-      showToast("error", res.error || "Upload failed");
+    try {
+      // Use API route directly to avoid Next.js Server Action FormData serialization issues
+      const res = await fetch('/api/products/upload-image', {
+        method: 'POST',
+        body: fd, // fetch auto-sets Content-Type: multipart/form-data
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        showToast("error", data.error || "Upload gagal");
+        return;
+      }
+
+      // API response: { success: true, data: { image_url: "https://triad.my.id/storage/image/xxx.jpg" } }
+      const imageUrl: string = data?.data?.image_url || data?.data?.url || data?.image_url || '';
+
+      if (imageUrl) {
+        setFormData(prev => ({ ...prev, image_url: imageUrl }));
+        showToast("success", "Gambar berhasil diupload!");
+      } else {
+        showToast("error", "Upload berhasil tapi URL gambar tidak ditemukan");
+      }
+    } catch (err) {
+      showToast("error", "Upload gagal: network error");
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -264,13 +338,17 @@ export default function ProductsPage() {
             {filteredProducts.map((p, idx) => (
                 viewMode === 'grid' ? (
                   <div key={p.id} className="premium-product-card">
-                    <div className="card-media" style={{ background: p.image_url ? `url(${p.image_url}) center/cover` : GRADIENTS[idx % GRADIENTS.length] }}>
-                        {!p.image_url && <div style={{ fontSize: 40 }}>📦</div>}
-                        <div className="card-glass-actions">
-                            <button className="edit-glass" onClick={() => handleOpenModal(p)}><EditIcon /></button>
-                            <button className="delete-glass" onClick={() => handleDelete(p.id)}><TrashIcon /></button>
-                        </div>
+                    <SafeImage 
+                      src={p.image_url} 
+                      fallback={GRADIENTS[idx % GRADIENTS.length]} 
+                      className="card-media"
+                      style={{ aspectRatio: '1 / 1' }}
+                    />
+                    <div className="card-glass-actions" style={{ position: 'absolute', top: 12, right: 12, zIndex: 10 }}>
+                        <button className="edit-glass" onClick={() => handleOpenModal(p)}><EditIcon /></button>
+                        <button className="delete-glass" onClick={() => handleDelete(p.id)}><TrashIcon /></button>
                     </div>
+                    
                     <div className="card-content">
                         <div className="card-meta">
                             <span className="cat-tag">{p.category}</span>
@@ -285,7 +363,12 @@ export default function ProductsPage() {
                   </div>
                 ) : (
                     <div key={p.id} className="premium-list-item">
-                        <div className="list-media" style={{ background: p.image_url ? `url(${p.image_url}) center/cover` : GRADIENTS[idx % GRADIENTS.length] }}></div>
+                        <SafeImage 
+                          src={p.image_url} 
+                          fallback={GRADIENTS[idx % GRADIENTS.length]} 
+                          className="list-media"
+                          style={{ aspectRatio: '1 / 1' }}
+                        />
                         <div className="list-info" style={{ flex: 1 }}>
                             <h4 style={{ margin: 0 }}>{p.name}</h4>
                             <span className="cat-tag" style={{ marginTop: 4 }}>{p.category}</span>
@@ -364,9 +447,12 @@ export default function ProductsPage() {
                     <div className="form-group full">
                         <label>Product Image</label>
                         <div className="upload-zone" style={{ padding: 12 }}>
-                            <div className="preview-area" style={{ width: 60, height: 60, background: formData.image_url ? `url(${formData.image_url}) center/cover` : 'rgba(99, 115, 171, 0.05)' }}>
-                                {!formData.image_url && <span style={{ fontSize: 10 }}>No Image</span>}
-                            </div>
+                            <SafeImage 
+                              src={formData.image_url} 
+                              fallback="rgba(99, 115, 171, 0.1)" 
+                              className="preview-area"
+                              style={{ width: 60, height: 60, borderRadius: 12, flexShrink: 0 }}
+                            />
                             <div className="upload-controls">
                                 <label className="upload-btn" style={{ padding: '8px 14px' }}>
                                     {submitting ? "..." : "Upload Image"}

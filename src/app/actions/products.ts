@@ -169,6 +169,7 @@ export async function uploadProductImage(formData: FormData) {
   try {
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${token}`
+      // NOTE: Do NOT set Content-Type here — fetch will auto-set multipart/form-data with boundary
     }
 
     if (tenantId) {
@@ -182,8 +183,12 @@ export async function uploadProductImage(formData: FormData) {
     })
 
     const data = await res.json()
-    if (!res.ok) return { success: false, error: data.message || 'Failed to upload image' }
-    return { success: true, data: data.data }
+    if (!res.ok) return { success: false, error: data.message || data.error || 'Failed to upload image' }
+
+    // Confirmed API response: { success: true, data: { image_url: "https://triad.my.id/storage/image/xxx.jpg" } }
+    const imageUrl: string = data?.data?.image_url || data?.data?.url || data?.image_url || ''
+
+    return { success: true, data: { image_url: imageUrl } }
   } catch (err) {
     return { success: false, error: 'Network error' }
   }

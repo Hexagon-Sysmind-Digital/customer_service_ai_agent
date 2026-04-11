@@ -212,3 +212,15 @@ export interface Order {
   created_at: string;
   updated_at?: string;
 }
+
+export interface Personality {
+  id: string;
+  tenant_id: string;
+  name: string;
+  tone: string;
+  language: string;
+  instructions: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}

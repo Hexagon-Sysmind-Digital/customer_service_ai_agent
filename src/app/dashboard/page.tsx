@@ -416,8 +416,13 @@ export default function DashboardPage() {
 
     const processRecords = (records: any[]) => {
       const data = new Array(buckets).fill(0);
+      if (!Array.isArray(records)) return data;
+      
       records.forEach(r => {
-        const date = new Date(r.created_at || r.start_time);
+        const dateStr = r.created_at || r.start_time;
+        if (!dateStr) return;
+        
+        const date = new Date(dateStr);
         if (range === "1D") {
           const hour = date.getHours();
           const bucket = Math.min(Math.floor(hour / 4), buckets - 1);

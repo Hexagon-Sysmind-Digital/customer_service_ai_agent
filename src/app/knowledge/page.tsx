@@ -71,10 +71,10 @@ export default function KnowledgePage() {
         const tenantRes = await fetchTenantById(user.tenant_id);
         if (tenantRes.success) {
           finalTenants = [tenantRes.data];
-        } else if (user.role === 'user' && (tenantRes.error?.includes('403') || tenantRes.error?.includes('Forbidden'))) {
-          finalTenants = [{ id: user.tenant_id, name: '' } as any];
-        } else if (!res.success) {
-           setError("Failed to fetch tenant info.");
+        } else {
+          // Fallback: Prevent UI lock if tenant fetch fails (503, etc.)
+          console.warn('DEBUG [KnowledgePage] Tenant fetch failed, using fallback:', tenantRes.error);
+          finalTenants = [{ id: user.tenant_id, name: "Your Workspace" } as any];
         }
       } else if (!res.success) {
         setError("Failed to fetch tenants.");
@@ -110,7 +110,9 @@ export default function KnowledgePage() {
       if (res.success) {
         setKnowledgeList(res.data);
       } else {
-        setError(res.error || "Failed to fetch Knowledge");
+        // Silent error for 503/403 to avoid annoying red boxes
+        console.warn(`[Knowledge] Failed to load data (${res.error}). Backend might be unstable.`);
+        setKnowledgeList([]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");

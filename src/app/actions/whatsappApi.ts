@@ -20,7 +20,8 @@ export async function connectWhatsApp() {
   try {
     const res = await fetch(`${API_BASE}/whatsapp/connect`, {
       method: 'POST',
-      headers: getCommonHeaders(token)
+      headers: getCommonHeaders(token),
+      cache: 'no-store'
     })
     
     const text = await res.text()
@@ -81,7 +82,8 @@ export async function disconnectWhatsApp() {
   try {
     const res = await fetch(`${API_BASE}/whatsapp/disconnect`, {
       method: 'POST',
-      headers: getCommonHeaders(token)
+      headers: getCommonHeaders(token),
+      cache: 'no-store'
     })
     
     const text = await res.text()

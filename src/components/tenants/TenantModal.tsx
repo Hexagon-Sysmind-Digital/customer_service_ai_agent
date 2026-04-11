@@ -19,6 +19,7 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
 
   const [form, setForm] = useState({
     name: tenant?.name || "",
+    is_active: tenant?.is_active ?? true, // Default to true for new tenants
     welcome_message: tenant?.config?.welcome_message || "",
     model_name: tenant?.config?.model_name || "qwen-plus",
     temperature: tenant?.config?.temperature ?? 0.7,
@@ -63,6 +64,7 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
       
       const payload = {
         name: form.name,
+        is_active: form.is_active,
         config: {
           welcome_message: form.welcome_message,
           model_name: form.model_name,
@@ -146,17 +148,49 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Name */}
-          <div style={fieldGroupStyle}>
-            <label style={labelStyle}>Tenant Name *</label>
-            <input
-              className="input-field"
-              type="text"
-              placeholder=""
-              value={form.name}
-              onChange={(e) => updateField("name", e.target.value)}
-              required
-            />
+          {/* Name & Status */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 16, alignItems: "flex-end" }}>
+            <div style={fieldGroupStyle}>
+              <label style={labelStyle}>Tenant Name *</label>
+              <input
+                className="input-field"
+                type="text"
+                placeholder=""
+                value={form.name}
+                onChange={(e) => updateField("name", e.target.value)}
+                required
+              />
+            </div>
+            <div style={{ ...fieldGroupStyle, alignItems: "center", minWidth: 80 }}>
+              <label style={labelStyle}>Status</label>
+              <div
+                className={`toggle-switch ${form.is_active ? "active" : ""}`}
+                style={{
+                  background: form.is_active ? "#22c55e" : "var(--text-tertiary)",
+                  position: "relative",
+                  width: 44,
+                  height: 22,
+                  borderRadius: 12,
+                  cursor: "pointer",
+                  transition: "0.3s"
+                }}
+                onClick={() => updateField("is_active", !form.is_active)}
+              >
+                <div style={{
+                  position: "absolute",
+                  top: 3,
+                  left: form.is_active ? 24 : 3,
+                  width: 16,
+                  height: 16,
+                  background: "#fff",
+                  borderRadius: "50%",
+                  transition: "0.3s"
+                }} />
+              </div>
+              <span style={{ fontSize: 10, fontWeight: 700, color: form.is_active ? "#22c55e" : "var(--text-tertiary)", marginTop: 2 }}>
+                {form.is_active ? "ACTIVE" : "INACTIVE"}
+              </span>
+            </div>
           </div>
 
           {/* Model & Language row */}

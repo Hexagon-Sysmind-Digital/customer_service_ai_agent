@@ -6,7 +6,7 @@ import { User } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { UserIcon, CalendarIcon, ShieldIcon, MailIcon, BadgeIcon, EditIcon, GlobeIcon, CheckIcon, ChatIcon, ActionIcon } from "@/components/icons";
 import { showToast } from "@/lib/swal";
-import { getActivePersonality, applyPresetPersonality, updatePersonality } from "@/app/actions/personalitiesApi";
+import { createPersonality, getPersonalities, activatePersonality } from "@/app/actions/personalitiesApi";
 import PageHeader from "@/components/ui/PageHeader";
 
 export default function ProfilePage() {
@@ -23,23 +23,35 @@ export default function ProfilePage() {
   }, []);
 
   const fetchActivePersonality = async () => {
-    const res = await getActivePersonality();
-    if (res.success) {
-      setActivePersonality(res.data);
+    const res = await getPersonalities();
+    if (res.success && res.data) {
+      const pData = Array.isArray(res.data) ? res.data : [res.data];
+      const active = pData.find((p: any) => p && p.is_active);
+      if (active) {
+        setActivePersonality(active);
+      } else {
+        setActivePersonality(null);
+      }
     }
   };
 
-  const PERSONALITY_PRESETS: Record<string, { name: string, instructions: string }> = {
+  const PERSONALITY_PRESETS: Record<string, { name: string, tone: string, language: string, instructions: string }> = {
     profesional: {
       name: "Profesional",
-      instructions: "Anda adalah asisten AI yang profesional, sopan, dan efisien. Gunakan kata ganti 'Saya' untuk agen dan 'Anda' untuk pelanggan. Hindari penggunaan bahasa gaul, singkatan yang tidak resmi, atau emoji yang berlebihan. Berikan jawaban yang akurat, faktual, dan langsung ke inti permasalahan."
+      tone: "Formal, efisien, dan sopan",
+      language: "Indonesian (Formal/Baku)",
+      instructions: "Gunakan bahasa Indonesia yang formal dan sopan (Saya/Anda). Fokus pada efisiensi informasi dan kejelasan. Hindari singkatan alay atau emoji berlebihan."
     },
     friendly: {
       name: "Friendly",
+      tone: "Ramah, ceria, dan hangat",
+      language: "Indonesian (Santai)",
       instructions: "Halo! Kamu adalah asisten AI yang ramah, hangat, dan sangat membantu. Gunakan bahasa yang santai tapi tetap sopan (seperti 'Halo kak' atau 'Terima kasih kak'). Jangan ragu untuk menggunakan emoji yang sesuai agar percakapan terasa lebih manusiawi dan nyaman bagi pelanggan."
     },
     concise: {
       name: "Concise",
+      tone: "To the point, efisien",
+      language: "Indonesian (Straightforward)",
       instructions: "Anda adalah asisten AI yang sangat to-the-point. Tugas utama Anda adalah memberikan informasi sesingkat dan sejelas mungkin. Jangan gunakan basa-basi atau kalimat pembuka/penutup yang panjang. Berikan fakta, data, atau jawaban langsung yang dibutuhkan pengguna."
     }
   };
@@ -50,13 +62,33 @@ export default function ProfilePage() {
 
     setIsSavingPersonality(true);
     try {
-      const res = await updatePersonality(presetData);
-      if (res.success) {
-        showToast("success", `AI Personality updated to ${presetData.name}`);
-        // Refresh active personality from response if available, otherwise use local data
-        setActivePersonality(res.data || { ...presetData, id: activePersonality?.id });
+      const allRes = await getPersonalities();
+      let existingId = null;
+
+      if (allRes.success && allRes.data) {
+        const pData = Array.isArray(allRes.data) ? allRes.data : [allRes.data];
+        const existing = pData.find((p: any) => p && p.name.toLowerCase() === presetData.name.toLowerCase());
+        if (existing) {
+          existingId = existing.id;
+        }
+      }
+
+      if (existingId) {
+        const actRes = await activatePersonality(existingId);
+        if (actRes.success) {
+          showToast("success", `AI Personality updated to ${presetData.name}`);
+          fetchActivePersonality();
+        } else {
+          showToast("error", actRes.error || "Failed to activate personality");
+        }
       } else {
-        showToast("error", res.error || "Failed to update personality");
+        const createRes = await createPersonality(presetData);
+        if (createRes.success) {
+          showToast("success", `AI Personality updated to ${presetData.name}`);
+          fetchActivePersonality();
+        } else {
+          showToast("error", createRes.error || "Failed to create personality");
+        }
       }
     } catch (err) {
       showToast("error", "An unexpected error occurred");

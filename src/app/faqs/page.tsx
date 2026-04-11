@@ -71,10 +71,10 @@ export default function FaqsPage() {
         const tenantRes = await fetchTenantById(user.tenant_id);
         if (tenantRes.success) {
           finalTenants = [tenantRes.data];
-        } else if (user.role === 'user' && (tenantRes.error?.includes('403') || tenantRes.error?.includes('Forbidden'))) {
-          finalTenants = [{ id: user.tenant_id, name: "Workspace" } as any];
-        } else if (!res.success) {
-           setError(`Failed to fetch tenant info: ${tenantRes.error}`);
+        } else {
+          // Fallback: If tenant fetch fails (503, 403, etc.), create a placeholder to prevent UI lock
+          console.warn('DEBUG [FaqsPage] Tenant fetch failed, using fallback:', tenantRes.error);
+          finalTenants = [{ id: user.tenant_id, name: "Your Workspace" } as any];
         }
       } else if (!res.success) {
         setError(`Failed to fetch tenants: ${res.error}`);
@@ -110,7 +110,9 @@ export default function FaqsPage() {
       if (res.success) {
         setFaqs(res.data);
       } else {
-        setError(res.error || "Failed to fetch FAQs");
+        // Silent error for 503/403 to avoid annoying red boxes
+        console.warn(`[FAQ] Failed to load data (${res.error}). Backend might be unstable.`);
+        setFaqs([]); 
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Network error");

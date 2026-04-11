@@ -42,7 +42,7 @@ export default function IntegrationsPage() {
     
     if (res.success && res.data?.qr_code) {
       setQrValue(res.data.qr_code);
-      setQrExpiry(120);
+      setQrExpiry(40);
       setWaStatus(res.data.status || "waiting_for_scan");
     }
   };
@@ -99,7 +99,7 @@ export default function IntegrationsPage() {
   // Auto-refresh QR when expired
   useEffect(() => {
     if (qrExpiry === 0 && showQR && waStatus !== "connected") {
-      setQrExpiry(120);
+      setQrExpiry(40);
       fetchQRCode();
     }
   }, [qrExpiry, showQR, waStatus]);
@@ -116,13 +116,13 @@ export default function IntegrationsPage() {
     console.log("Disconnect Response:", res);
     setIsLoading(false);
     
-    // Set status to disconnected locally to allow UI to show QR button again
-    setWaStatus("disconnected");
-    setQrValue("");
-    setShowQR(false);
-    
-    if (!res.success && res.error !== "no WhatsApp connection for this tenant") {
-      alert("Note: Connection reset locally. You can now try to reconnect.");
+    if (res.success || res.error === "no WhatsApp connection for this tenant") {
+      setWaStatus("disconnected");
+      setQrValue("");
+      setShowQR(false);
+      alert("WhatsApp session terminated successfully.");
+    } else {
+      alert("Failed to disconnect: " + res.error);
     }
   };
 
