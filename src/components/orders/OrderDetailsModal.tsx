@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckIcon, CloseIcon, UserIcon, MailIcon, CalendarIcon, CreditCardIcon } from "@/components/icons";
+import { CheckIcon, CloseIcon, UserIcon, MailIcon, CalendarIcon } from "@/components/icons";
 
 interface OrderItem {
   product_id: string;

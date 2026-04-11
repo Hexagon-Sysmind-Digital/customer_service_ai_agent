@@ -5,11 +5,11 @@ import { fetchTenants, fetchTenantById } from "@/app/actions/tenants";
 import { fetchOrders, updateOrderStatus } from "@/app/actions/ordersApi";
 import { getMe } from "@/app/actions/auth";
 import { Tenant, User } from "@/types";
-import { ListIcon, CheckIcon, AlertCircleIcon, PackageIcon } from "@/components/icons";
+import { PackageIcon } from "@/components/icons";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import PageHeader from "@/components/ui/PageHeader";
 import OrderDetailsModal from "@/components/orders/OrderDetailsModal";
-import { showToast, showConfirm } from "@/lib/swal";
+import { showToast } from "@/lib/swal";
 
 export default function OrdersPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
