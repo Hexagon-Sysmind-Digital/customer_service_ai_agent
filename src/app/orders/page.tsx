@@ -51,7 +51,7 @@ export default function OrdersPage() {
       setTenants(finalTenants);
       if (finalTenants.length > 0) {
         const defaultId = sessionStorage.getItem("tenant_id") || finalTenants[0].id;
-        const exists = finalTenants.some((t: any) => t.id === defaultId);
+        const exists = finalTenants.some((t: Tenant) => t.id === defaultId);
         setSelectedTenantId(exists ? defaultId : finalTenants[0].id);
       }
     } catch {
@@ -72,9 +72,10 @@ export default function OrdersPage() {
       } else {
         setError(res.error || "Failed to fetch orders");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "An unexpected network error occurred";
       console.error("DEBUG [loadOrders] UI Catch:", err);
-      setError(err.message || "An unexpected network error occurred while fetching orders");
+      setError(message);
     } finally {
       setLoadingOrders(false);
     }
@@ -99,13 +100,14 @@ export default function OrdersPage() {
         showToast("success", `Order ${status} successfully`);
         loadOrders(selectedTenantId);
         if (selectedOrder?.id === orderId) {
-          setSelectedOrder((prev: any) => ({ ...prev, status }));
+          setSelectedOrder((prev) => prev ? { ...prev, status } : null);
         }
       } else {
         showToast("error", res.error || "Failed to update order status");
       }
-    } catch {
-      showToast("error", "Network error");
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Network error";
+      showToast("error", errorMessage);
     } finally {
       setLoadingStatus(false);
     }

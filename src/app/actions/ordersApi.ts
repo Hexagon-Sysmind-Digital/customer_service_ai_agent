@@ -35,9 +35,10 @@ export async function fetchOrders(tenantId?: string) {
 
     const data = await res.json();
     return data;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error occurred";
     console.error("DEBUG [fetchOrders] Error:", error);
-    return { success: false, error: error.message || "Unknown error occurred" };
+    return { success: false, error: message };
   }
 }
 
@@ -60,8 +61,8 @@ export async function fetchOrderById(orderId: string) {
 
     const data = await res.json();
     return data;
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
 
@@ -85,7 +86,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
     const data = await res.json();
     return data;
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
