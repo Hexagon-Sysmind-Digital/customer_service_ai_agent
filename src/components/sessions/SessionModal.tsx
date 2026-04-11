@@ -158,7 +158,7 @@ export default function SessionModal({ tenantId, sessionId, onClose, onError }: 
             </div>
           ) : (
             messages.map((msg: any, idx) => {
-                const isUser = msg.role === 'user';
+                const isUser = msg.sender === 'user' || msg.role === 'user';
                 return (
                 <div key={msg.id || idx} style={{
                     display: "flex",
@@ -180,7 +180,7 @@ export default function SessionModal({ tenantId, sessionId, onClose, onError }: 
                         lineHeight: 1.5,
                         whiteSpace: "pre-wrap"
                     }}>
-                        {msg.content || msg.text || JSON.stringify(msg)}
+                        {msg.original_content || msg.content || msg.text || (typeof msg === 'string' ? msg : JSON.stringify(msg))}
                     </div>
                     <span style={{ 
                         fontSize: 11, 
@@ -188,7 +188,7 @@ export default function SessionModal({ tenantId, sessionId, onClose, onError }: 
                         marginTop: 6,
                         padding: "0 4px"
                     }}>
-                        {isUser ? "User" : "AI"} {(msg.timestamp || msg.created_at) && `• ${formatTime(msg.timestamp || msg.created_at)}`}
+                        {isUser ? "User" : (msg.sender === 'bot' ? "AI" : "System")} {(msg.created_at || msg.timestamp) && `• ${formatTime(msg.created_at || msg.timestamp)}`}
                     </span>
                 </div>
               );
