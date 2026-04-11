@@ -44,6 +44,11 @@ export default function IntegrationsPage() {
       setQrValue(res.data.qr_code);
       setQrExpiry(40);
       setWaStatus(res.data.status || "waiting_for_scan");
+    } else {
+      // If fetching QR fails, stop the UI attempting to show it and alert
+      setShowQR(false);
+      setQrValue("");
+      alert("Failed to fetch WhatsApp QR Code: " + (res.error || "Unknown error"));
     }
   };
 
@@ -274,8 +279,12 @@ export default function IntegrationsPage() {
                             </div>
                         ) : (
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
-                                <div className="qr-frame" style={{ padding: 16, borderRadius: 24 }}>
-                                    <QRCodeSVG value={qrValue} size={160} level="M" bgColor="#fff" fgColor="#000" />
+                                <div className="qr-frame" style={{ padding: 16, borderRadius: 24, width: 192, height: 192, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    {qrValue ? (
+                                        <QRCodeSVG value={qrValue} size={160} level="M" bgColor="#fff" fgColor="#000" />
+                                    ) : (
+                                        <div className="premium-loader" style={{ width: 32, height: 32 }} />
+                                    )}
                                     <div className="qr-overlay" style={{ borderRadius: 24 }} />
                                 </div>
 

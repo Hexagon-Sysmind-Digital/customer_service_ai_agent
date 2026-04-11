@@ -127,12 +127,7 @@ function SafeImage({ src, fallback, className, style }: { src?: string; fallback
 
   useEffect(() => {
     setIsError(false)
-    if (src) {
-      console.log(`[SafeImage] Attempting to load: ${src}`);
-      if (proxiedSrc !== src) {
-        console.log(`[SafeImage] Using Proxy URL: ${proxiedSrc}`);
-      }
-    }
+    // Removed verbose logging to clean up the console
   }, [src, proxiedSrc])
   
   if (!src) {
@@ -342,7 +337,7 @@ export default function ProductsPage() {
                       src={p.image_url} 
                       fallback={GRADIENTS[idx % GRADIENTS.length]} 
                       className="card-media"
-                      style={{ aspectRatio: '1 / 1' }}
+                      style={{ aspectRatio: '1 / 1', width: '100%', objectFit: 'cover' }}
                     />
                     <div className="card-glass-actions" style={{ position: 'absolute', top: 12, right: 12, zIndex: 10 }}>
                         <button className="edit-glass" onClick={() => handleOpenModal(p)}><EditIcon /></button>
@@ -367,7 +362,7 @@ export default function ProductsPage() {
                           src={p.image_url} 
                           fallback={GRADIENTS[idx % GRADIENTS.length]} 
                           className="list-media"
-                          style={{ aspectRatio: '1 / 1' }}
+                          style={{ width: 80, height: 80, minWidth: 80, aspectRatio: '1 / 1', borderRadius: 12, flexShrink: 0, overflow: 'hidden' }}
                         />
                         <div className="list-info" style={{ flex: 1 }}>
                             <h4 style={{ margin: 0 }}>{p.name}</h4>
@@ -478,7 +473,7 @@ export default function ProductsPage() {
       </div>
       
       <style jsx>{`
-        .product-grid-refined { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+        .product-grid-refined { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
         .premium-product-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 20px; overflow: hidden; transition: 0.3s; }
         .premium-product-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
         .card-media { height: 180px; position: relative; display: flex; align-items: center; justify-content: center; background-size: cover; background-position: center; }
