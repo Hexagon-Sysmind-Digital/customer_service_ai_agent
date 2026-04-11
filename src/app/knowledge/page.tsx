@@ -9,6 +9,7 @@ import { createKnowledge, fetchKnowledge, deleteKnowledge } from "@/app/actions/
 import KnowledgeModal from "@/components/knowledge/KnowledgeModal";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { showToast, showConfirm } from "@/lib/swal";
+import PageHeader from "@/components/ui/PageHeader";
 
 
 export default function KnowledgePage() {
@@ -202,29 +203,25 @@ export default function KnowledgePage() {
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-                Knowledge Base
-              </h1>
-              {!loadingKnowledge && selectedTenantId && (
-                <span className="badge badge-count" style={{ fontSize: 13 }}>
-                  {knowledgeList.length}
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: 0 }}>
-              Manage foundational data and policies for AI Agents
-            </p>
-          </div>
-          {(currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
-            <button className="btn-primary" onClick={handleCreateNew} disabled={!selectedTenantId}>
-              <PlusIcon />
-              Add Knowledge
-            </button>
-          )}
-        </div>
+        <PageHeader 
+          title="Knowledge" 
+          description="Manage foundational data, policies, and system templates that serve as your AI Agent's brain."
+          badge={
+            !loadingKnowledge && selectedTenantId && (
+              <span className="badge badge-count" style={{ fontSize: 13 }}>
+                {knowledgeList.length}
+              </span>
+            )
+          }
+          action={
+            (currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
+              <button className="btn-primary" onClick={handleCreateNew} disabled={!selectedTenantId}>
+                <PlusIcon />
+                Add Knowledge
+              </button>
+            )
+          }
+        />
 
 
         {/* Tenant Selector & System Templates */}

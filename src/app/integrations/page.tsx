@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { WhatsAppIcon, TelegramIcon, GlobeIcon, ChevronRightIcon, CheckIcon } from "@/components/icons";
+import PageHeader from "@/components/ui/PageHeader";
 
 import { connectWhatsApp, statusWhatsApp, disconnectWhatsApp } from "@/app/actions/whatsappApi";
 import { updateTelegramConfig, connectTelegram, statusTelegram, disconnectTelegram } from "@/app/actions/telegramApi";
@@ -173,283 +174,440 @@ export default function IntegrationsPage() {
 
 
   return (
-    <div style={{ minHeight: "100vh", padding: "40px 24px", color: "var(--foreground)" }}>
-      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+    <div style={{ minHeight: "100vh", padding: "60px 40px", color: "var(--foreground)", position: "relative", overflow: "hidden" }}>
+      {/* Background Ornaments */}
+      <div style={{ position: "absolute", top: -150, right: -150, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)", filter: "blur(80px)", zIndex: 0 }} />
+      <div style={{ position: "absolute", bottom: -100, left: -100, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(37,211,102,0.08) 0%, transparent 70%)", filter: "blur(70px)", zIndex: 0 }} />
+
+      <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
         
-        {/* Header */}
-        <div style={{ marginBottom: 48 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-            <div style={{ 
-                width: 48, height: 48, borderRadius: 14, 
-                background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))",
-                display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent-primary)"
-            }}>
-                <GlobeIcon />
-            </div>
-            <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-              Integrations
-            </h1>
-          </div>
-          <p style={{ fontSize: 16, color: "var(--text-secondary)", margin: 0 }}>
-            Connect your AI agent to world-class messaging platforms.
-          </p>
-        </div>
+        {/* Page Header */}
+        <PageHeader 
+          title="Integrations" 
+          description="Synchronize your AI brain with the world's most popular messaging platforms. Experience seamless omnichannel communication."
+        />
 
-        <div style={{ display: "grid", gap: 32 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 48 }}>
 
-          {/* WhatsApp Section */}
-          <section style={{ 
-            background: "var(--card-bg)", 
-            border: "1px solid var(--card-border)", 
-            borderRadius: 24, 
+          {/* WhatsApp Premium Card */}
+          <section className="integration-card" style={{ 
+            background: "linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(255, 255, 255, 0.08)", 
+            borderRadius: 40, 
+            padding: "48px",
+            position: "relative",
             overflow: "hidden",
-            boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)"
+            boxShadow: "0 40px 80px -20px rgba(0,0,0,0.3)",
+            transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
           }}>
-            <div style={{ padding: 40 }}>
-                <div style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
-                    {/* Left: Interactive Section */}
-                    <div style={{ flex: "1 1 300px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-                            <div style={{ color: "#25D366" }}>
-                                <WhatsAppIcon size={32} />
-                            </div>
-                            <h2 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>WhatsApp Integration</h2>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 40 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                    <div style={{ 
+                        width: 72, height: 72, borderRadius: 24, background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)",
+                        display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
+                        boxShadow: "0 15px 30px -5px rgba(37, 211, 102, 0.4)"
+                    }}>
+                        <WhatsAppIcon size={40} />
+                    </div>
+                    <div>
+                        <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>WhatsApp</h2>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                            <span style={{ fontSize: 14, color: "#25D366", fontWeight: 700 }}>Official API</span>
+                            <div style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--text-tertiary)" }} />
+                            <span style={{ fontSize: 14, color: "var(--text-tertiary)", fontWeight: 500 }}>High Priority</span>
                         </div>
-                        
-                        <div style={{ 
-                            height: 300, 
-                            background: waStatus === "connected" ? "rgba(37, 211, 102, 0.04)" : showQR ? "#ffffff" : "rgba(99, 115, 171, 0.04)", 
-                            borderRadius: 16, 
-                            border: waStatus === "connected" ? "1px solid #25D366" : showQR ? "1px solid #e5e7eb" : "2px dashed var(--border-color)",
-                            display: "flex", 
-                            flexDirection: "column",
-                            alignItems: "center", 
-                            justifyContent: "center",
-                            cursor: (showQR || waStatus === "connected") ? "default" : "pointer",
-                            transition: "all 0.3s ease",
-                            position: "relative",
-                            overflow: "hidden"
-                        }}
-                        onClick={() => !showQR && waStatus !== "connected" && handleStartConnect()}
-                        >
-                            {isLoading ? (
-                                <div style={{ fontSize: 14, color: "var(--text-secondary)" }}>Loading...</div>
-                            ) : waStatus === "connected" ? (
-                                <>
-                                    <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-                                    <span style={{ fontWeight: 600, color: "#25D366" }}>WhatsApp Connected</span>
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); handleDisconnect(); }}
-                                        style={{ marginTop: 16, fontSize: 13, color: "#ef4444", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
-                                    >
-                                        Disconnect Account
-                                    </button>
-                                </>
-                            ) : !showQR ? (
-                                <>
-                                    <div style={{ fontSize: 40, marginBottom: 12 }}>📱</div>
-                                    <span style={{ fontWeight: 600, color: "#25D366" }}>Click to generate QR Code</span>
-                                    <span style={{ fontSize: 13, color: "var(--text-tertiary)", marginTop: 4 }}>Scan with your WhatsApp mobile app</span>
-                                </>
-                            ) : (
-                                <div style={{ 
-                                    display: "flex", flexDirection: "column", alignItems: "center", gap: 12
-                                }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                                        <div style={{ color: "#25D366" }}><WhatsAppIcon size={20} /></div>
-                                        <span style={{ fontSize: 13, fontWeight: 600, color: "#25D366" }}>WhatsApp Web</span>
-                                    </div>
-                                    
-                                    <div style={{ 
-                                        padding: 12, 
-                                        background: "#fff", 
-                                        borderRadius: 12, 
-                                        boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                                        border: "1px solid #f0f0f0",
-                                        position: "relative"
-                                    }}>
-                                        <QRCodeSVG 
-                                            value={qrValue}
-                                            size={160}
-                                            level="M"
-                                            bgColor="#ffffff"
-                                            fgColor="#111827"
-                                        />
-                                    </div>
+                    </div>
+                </div>
+                {waStatus === "connected" && (
+                  <div className="status-badge" style={{ padding: "8px 16px", borderRadius: 100, background: "rgba(34, 197, 94, 0.12)", color: "#22c55e", fontSize: 13, fontWeight: 800, border: "1px solid rgba(34, 197, 94, 0.2)", letterSpacing: "0.05em" }}>
+                    ONLINE
+                  </div>
+                )}
+            </div>
 
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                            <div style={{ 
-                                                width: 8, height: 8, borderRadius: "50%", 
-                                                background: qrExpiry > 30 ? "#22c55e" : qrExpiry > 10 ? "#eab308" : "#ef4444"
-                                            }} />
-                                            <span style={{ 
-                                                fontSize: 12, 
-                                                fontWeight: 600, 
-                                                color: qrExpiry > 30 ? "#22c55e" : qrExpiry > 10 ? "#eab308" : "#ef4444" 
-                                            }}>
-                                                Expires in {formatTime(qrExpiry)}
-                                            </span>
-                                        </div>
-                                        {/* Status debugger */}
-                                        <span style={{ fontSize: 10, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                            Current Status: <span style={{ color: "var(--accent-primary)" }}>{waStatus}</span>
+            <div style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
+                {/* Left: Interactive Section */}
+                <div style={{ flex: "1 1 340px", display: "flex", flexDirection: "column", gap: 24 }}>
+                    <div style={{ 
+                        height: 380, 
+                        background: waStatus === "connected" ? "radial-gradient(circle at center, rgba(37, 211, 102, 0.08) 0%, transparent 70%)" : "rgba(0,0,0,0.15)", 
+                        borderRadius: 32, 
+                        border: "1px solid rgba(255,255,255,0.05)",
+                        display: "flex", 
+                        flexDirection: "column",
+                        alignItems: "center", 
+                        justifyContent: "center",
+                        position: "relative",
+                        transition: "all 0.5s ease"
+                    }}>
+                        {isLoading ? (
+                            <div style={{ textAlign: "center" }}>
+                                <div className="premium-loader" />
+                                <p style={{ marginTop: 24, fontSize: 13, color: "var(--text-secondary)", fontWeight: 600 }}>Provisioning Instance...</p>
+                            </div>
+                        ) : waStatus === "connected" ? (
+                            <div style={{ textAlign: "center", padding: "0 24px" }}>
+                                <div className="success-glow" style={{ 
+                                    width: 80, height: 80, borderRadius: "50%", background: "rgba(34, 197, 94, 0.15)",
+                                    display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px"
+                                }}>
+                                    <CheckIcon size={36} color="#22c55e" />
+                                </div>
+                                <h3 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 10px" }}>System Linked</h3>
+                                <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 24, lineHeight: 1.6 }}>Your agent is actively processing conversations on WhatsApp.</p>
+                                <button 
+                                    onClick={handleDisconnect}
+                                    className="disconnect-btn"
+                                >
+                                    Terminate Session
+                                </button>
+                            </div>
+                        ) : !showQR ? (
+                            <div 
+                                style={{ textAlign: "center", cursor: "pointer", width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}
+                                onClick={handleStartConnect}
+                            >
+                                <div className="qr-placeholder-icon" style={{ fontSize: 64 }}>📱</div>
+                                <h3 style={{ fontSize: 20, fontWeight: 800, margin: "16px 0 6px", color: "#25D366" }}>Initialize Pairing</h3>
+                                <p style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>Secured multi-device connection</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+                                <div className="qr-frame" style={{ padding: 16, borderRadius: 24 }}>
+                                    <QRCodeSVG value={qrValue} size={160} level="M" bgColor="#fff" fgColor="#000" />
+                                    <div className="qr-overlay" style={{ borderRadius: 24 }} />
+                                </div>
+
+                                <div style={{ textAlign: "center" }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+                                        <div className="timer-dot" style={{ background: qrExpiry > 30 ? "#22c55e" : "#ef4444" }} />
+                                        <span style={{ fontSize: 14, fontWeight: 800, color: qrExpiry > 30 ? "#22c55e" : "#ef4444", fontVariantNumeric: "tabular-nums" }}>
+                                            {formatTime(qrExpiry)} remaining
                                         </span>
                                     </div>
-
+                                    <div style={{ padding: "4px 12px", borderRadius: 100, background: "rgba(255,255,255,0.05)", display: "inline-block" }}>
+                                      <span style={{ fontSize: 10, fontWeight: 800, color: "var(--text-tertiary)", letterSpacing: "0.1em" }}>
+                                        STATUS: <span style={{ color: "var(--accent-primary)" }}>{waStatus.toUpperCase()}</span>
+                                      </span>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right: Tutorial Section */}
+                <div style={{ flex: "1 1 200px", padding: "10px 0" }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ width: 4, height: 16, background: "#25D366", borderRadius: 4 }} />
+                        Pairing Instructions
+                    </div>
+                    <div style={{ display: "grid", gap: 20 }}>
+                        {INTEGRATION_STEPS.whatsapp.map((step, idx) => (
+                            <div key={idx} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                                <div style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(255,255,255,0.05)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0, border: "1px solid rgba(255,255,255,0.1)" }}>{idx + 1}</div>
+                                <div style={{ margin: 0, fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.6, fontWeight: 500 }}>{step}</div>
+                            </div>
+                        ))}
                     </div>
 
-                    {/* Right: Tutorial */}
-                    <div style={{ flex: "1 1 300px", padding: "0 20px" }}>
-                        <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 20 }}>
-                            How to connect
-                        </h3>
-                        <div style={{ display: "grid", gap: 16 }}>
-                            {INTEGRATION_STEPS.whatsapp.map((step, idx) => (
-                                <div key={idx} style={{ display: "flex", gap: 16 }}>
-                                    <div style={{ 
-                                        width: 24, height: 24, borderRadius: "50%", 
-                                        background: "var(--accent-primary)", color: "#fff", 
-                                        display: "flex", alignItems: "center", justifyContent: "center", 
-                                        fontSize: 12, fontWeight: 700, flexShrink: 0 
-                                    }}>
-                                        {idx + 1}
-                                    </div>
-                                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--text-secondary)" }}>{step}</p>
-                                </div>
-                            ))}
-                        </div>
+                    <div style={{ marginTop: 32, padding: "16px", borderRadius: 16, background: "rgba(37, 211, 102, 0.05)", border: "1px solid rgba(37, 211, 102, 0.1)" }}>
+                        <p style={{ margin: 0, fontSize: 12, color: "#25D366", fontWeight: 600, lineHeight: 1.5 }}>
+                            💡 Pro Tip: Keeping your browser window open ensures a faster initial synchronization.
+                        </p>
                     </div>
                 </div>
             </div>
           </section>
 
-          {/* Telegram Section */}
-          <section style={{ 
-            background: "var(--card-bg)", 
-            border: "1px solid var(--card-border)", 
-            borderRadius: 24, 
+          {/* Telegram Premium Card */}
+          <section className="integration-card" style={{ 
+            background: "linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(255, 255, 255, 0.08)", 
+            borderRadius: 40, 
+            padding: "48px",
+            position: "relative",
             overflow: "hidden",
-            boxShadow: "0 10px 30px -10px rgba(0,0,0,0.1)"
+            boxShadow: "0 40px 80px -20px rgba(0,0,0,0.3)",
+            transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
           }}>
-            <div style={{ padding: 40 }}>
-                <div style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
-                    {/* Left: Input Form */}
-                    <div style={{ flex: "1 1 300px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-                            <div style={{ color: "#0088cc" }}>
-                                <TelegramIcon size={32} />
-                            </div>
-                            <h2 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>Telegram Integration</h2>
-                        </div>
-                        
-                        <div style={{ 
-                            padding: 32, 
-                            background: tgStatus === "connected" ? "rgba(0, 136, 204, 0.04)" : "rgba(99, 115, 171, 0.04)", 
-                            borderRadius: 16, 
-                            border: tgStatus === "connected" ? "1px solid #0088cc" : "1px solid var(--border-color)" 
-                        }}>
-                            {tgStatus === "connected" ? (
-                              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 180, gap: 12 }}>
-                                <div style={{ fontSize: 48 }}>✅</div>
-                                <span style={{ fontWeight: 600, color: "#0088cc" }}>Telegram Bot Connected</span>
-                                <div style={{ marginTop: 8, padding: "10px 14px", background: "rgba(0, 136, 204, 0.08)", borderRadius: 10, display: "flex", alignItems: "center", gap: 10 }}>
-                                  <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                    <CheckIcon />
-                                  </div>
-                                  <span style={{ fontSize: 13, color: "#22c55e", fontWeight: 600 }}>Polling is active</span>
-                                </div>
-                                <button
-                                  onClick={handleDisconnectTelegram}
-                                  disabled={isConnectingTg}
-                                  style={{ marginTop: 8, fontSize: 13, color: "#ef4444", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
-                                >
-                                  {isConnectingTg ? "Disconnecting..." : "Disconnect Bot"}
-                                </button>
-                              </div>
-                            ) : (
-                              <>
-                                <label style={{ display: "block", fontSize: 14, fontWeight: 500, marginBottom: 12, color: "var(--text-secondary)" }}>
-                                  Bot API Token
-                                </label>
-                                <div style={{ position: "relative" }}>
-                                  <input 
-                                      type="password" 
-                                      placeholder="Paste token from @BotFather" 
-                                      value={tgToken}
-                                      onChange={(e) => setTgToken(e.target.value)}
-                                      style={{
-                                          width: "100%",
-                                          padding: "14px 16px",
-                                          borderRadius: 12,
-                                          background: "var(--input-bg)",
-                                          border: "1.5px solid var(--input-border)",
-                                          color: "var(--foreground)",
-                                          fontSize: 14,
-                                          fontFamily: "monospace",
-                                          marginBottom: 20,
-                                          outline: "none",
-                                          transition: "all 0.2s"
-                                      }}
-                                      onFocus={(e) => e.target.style.borderColor = "var(--accent-primary)"}
-                                      onBlur={(e) => e.target.style.borderColor = "var(--input-border)"}
-                                  />
-                                </div>
-                                <button 
-                                  className="btn-primary" 
-                                  onClick={handleConnectTelegram}
-                                  disabled={!tgToken || isConnectingTg}
-                                  style={{ 
-                                      width: "100%", 
-                                      justifyContent: "center",
-                                      padding: "14px",
-                                      borderRadius: 12,
-                                      background: (!tgToken || isConnectingTg) ? "var(--text-tertiary)" : "var(--accent-primary)"
-                                  }}
-                                >
-                                  {isConnectingTg ? "Connecting..." : "Connect Telegram Bot"}
-                                  {!isConnectingTg && <ChevronRightIcon />}
-                                </button>
-                                {tgError && (
-                                  <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(239, 68, 68, 0.08)", borderRadius: 10, fontSize: 13, color: "#ef4444" }}>
-                                    {tgError}
-                                  </div>
-                                )}
-                              </>
-                            )}
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 40 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+                    <div style={{ 
+                        width: 72, height: 72, borderRadius: 24, background: "linear-gradient(135deg, #0088cc 0%, #00a8ff 100%)",
+                        display: "flex", alignItems: "center", justifyContent: "center", color: "#fff",
+                        boxShadow: "0 15px 30px -5px rgba(0, 136, 204, 0.4)"
+                    }}>
+                        <TelegramIcon size={40} />
+                    </div>
+                    <div>
+                        <h2 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Telegram</h2>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                            <span style={{ fontSize: 14, color: "#0088cc", fontWeight: 700 }}>Bot Infrastructure</span>
+                            <div style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--text-tertiary)" }} />
+                            <span style={{ fontSize: 14, color: "var(--text-tertiary)", fontWeight: 500 }}>Real-time Polling</span>
                         </div>
                     </div>
+                </div>
+                {tgStatus === "connected" && (
+                  <div className="status-badge-blue" style={{ padding: "8px 16px", borderRadius: 100, background: "rgba(0, 136, 204, 0.12)", color: "#0088cc", fontSize: 13, fontWeight: 800, border: "1px solid rgba(0, 136, 204, 0.2)", letterSpacing: "0.05em" }}>
+                    POLLING
+                  </div>
+                )}
+            </div>
 
-                    {/* Right: Tutorial */}
-                    <div style={{ flex: "1 1 300px", padding: "0 20px" }}>
-                        <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 20 }}>
-                            How to connect
-                        </h3>
-                        <div style={{ display: "grid", gap: 16 }}>
-                            {INTEGRATION_STEPS.telegram.map((step, idx) => (
-                                <div key={idx} style={{ display: "flex", gap: 16 }}>
-                                    <div style={{ 
-                                        width: 24, height: 24, borderRadius: "50%", 
-                                        background: "var(--accent-primary)", color: "#fff", 
-                                        display: "flex", alignItems: "center", justifyContent: "center", 
-                                        fontSize: 12, fontWeight: 700, flexShrink: 0 
-                                    }}>
-                                        {idx + 1}
-                                    </div>
-                                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--text-secondary)" }}>{step}</p>
+            <div style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
+                {/* Left: Interactive Section */}
+                <div style={{ flex: "1 1 340px", display: "flex", flexDirection: "column", gap: 24 }}>
+                    <div style={{ 
+                        height: 380, 
+                        background: tgStatus === "connected" ? "radial-gradient(circle at center, rgba(0, 136, 204, 0.08) 0%, transparent 70%)" : "rgba(0,0,0,0.15)", 
+                        borderRadius: 32, 
+                        border: "1px solid rgba(255,255,255,0.05)",
+                        padding: "0 32px",
+                        display: "flex", 
+                        flexDirection: "column",
+                        alignItems: "center", 
+                        justifyContent: "center",
+                        position: "relative"
+                    }}>
+                        {tgStatus === "connected" ? (
+                          <div style={{ textAlign: "center", width: "100%" }}>
+                            <div className="success-glow" style={{ 
+                                width: 80, height: 80, borderRadius: "50%", background: "rgba(0, 136, 204, 0.15)",
+                                display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px"
+                            }}>
+                                <CheckIcon size={36} color="#0088cc" />
+                            </div>
+                            <h3 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 10px" }}>Engine Active</h3>
+                            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 24, lineHeight: 1.6 }}>The bot is successfully harvesting messages from Telegram.</p>
+                            <button
+                              onClick={handleDisconnectTelegram}
+                              disabled={isConnectingTg}
+                              className="disconnect-btn-tg"
+                            >
+                              {isConnectingTg ? "Disconnecting..." : "Stop Engine"}
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ width: "100%" }}>
+                            <div style={{ marginBottom: 28 }}>
+                              <label style={{ display: "block", fontSize: 13, fontWeight: 700, marginBottom: 12, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                                Access Token
+                              </label>
+                              <div className="input-glow-container">
+                                <input 
+                                    type="password" 
+                                    placeholder="7123456789:AAH-xXyYzZ..." 
+                                    value={tgToken}
+                                    onChange={(e) => setTgToken(e.target.value)}
+                                    className="premium-input"
+                                />
+                                <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)" }}>
+                                    <GlobeIcon size={18} />
                                 </div>
-                            ))}
-                        </div>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={handleConnectTelegram}
+                              disabled={!tgToken || isConnectingTg}
+                              className="connect-btn-tg"
+                              style={{ padding: "16px", borderRadius: "16px", fontSize: "15px" }}
+                            >
+                              {isConnectingTg ? "Syncing..." : "Initialize Engine"}
+                              {!isConnectingTg && <ChevronRightIcon size={18} />}
+                            </button>
+                            {tgError && (
+                              <div className="error-badge" style={{ padding: "12px 16px", borderRadius: "12px", fontSize: "12px" }}>
+                                ⚠️ {tgError}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right: Tutorial Section */}
+                <div style={{ flex: "1 1 200px", padding: "10px 0" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 24, display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 4, height: 16, background: "#0088cc", borderRadius: 4 }} />
+                    Bot Configuration
+                </div>
+                    <div style={{ display: "grid", gap: 20 }}>
+                        {INTEGRATION_STEPS.telegram.map((step, idx) => (
+                            <div key={idx} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                                <div style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(255,255,255,0.05)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0, border: "1px solid rgba(255,255,255,0.1)" }}>{idx + 1}</div>
+                                <p style={{ margin: 0, fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.6, fontWeight: 500 }}>{step}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div style={{ marginTop: 32, padding: "16px", borderRadius: 16, background: "rgba(0, 136, 204, 0.05)", border: "1px solid rgba(0, 136, 204, 0.1)" }}>
+                        <p style={{ margin: 0, fontSize: 12, color: "#0088cc", fontWeight: 600, lineHeight: 1.5 }}>
+                            🔒 Security: We never store your bot tokens in plain text. All connections are encrypted.
+                        </p>
                     </div>
                 </div>
             </div>
           </section>
 
         </div>
+
+        {/* Support Section */}
+        <div style={{ marginTop: 80, padding: "40px", background: "rgba(255,255,255,0.02)", borderRadius: 40, border: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 24 }}>
+            <div>
+              <h4 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 6px" }}>Need specialized integration?</h4>
+              <p style={{ fontSize: 14, color: "var(--text-tertiary)", margin: 0 }}>Discover our Enterprise API and Custom Webhook solutions.</p>
+            </div>
+            <div style={{ display: "flex", gap: 16 }}>
+              <button style={{ padding: "12px 24px", borderRadius: 14, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Documentation</button>
+              <button style={{ padding: "12px 24px", borderRadius: 14, background: "var(--accent-primary)", border: "none", color: "#fff", fontWeight: 700, cursor: "pointer", boxShadow: "0 10px 20px -5px rgba(99,102,241,0.4)" }}>Special Request</button>
+            </div>
+        </div>
+
       </div>
+
+      <style jsx global>{`
+        .integration-card:hover {
+          transform: translateY(-8px) scale(1.002);
+          border-color: rgba(255, 255, 255, 0.15) !important;
+          box-shadow: 0 50px 100px -20px rgba(0,0,0,0.4) !important;
+        }
+        
+        .qr-frame {
+          padding: 16px;
+          background: #fff;
+          border-radius: 24px;
+          box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+          position: relative;
+        }
+        
+        .qr-overlay {
+          position: absolute;
+          inset: 0;
+          border-radius: 24px;
+          box-shadow: inset 0 0 30px rgba(37, 211, 102, 0.1);
+          pointer-events: none;
+        }
+
+        .premium-loader {
+          width: 44px;
+          height: 44px;
+          border: 3px solid rgba(37, 211, 102, 0.1);
+          border-top: 3px solid #25D366;
+          border-radius: 50%;
+          animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        .qr-placeholder-icon {
+          animation: bounce 2s infinite ease-in-out;
+        }
+
+        .input-glow-container {
+          position: relative;
+        }
+
+        .premium-input {
+          width: 100%;
+          padding: 18px 20px;
+          background: rgba(0,0,0,0.2) !important;
+          border: 1px solid rgba(255,255,255,0.1) !important;
+          border-radius: 16px !important;
+          color: #fff !important;
+          font-family: inherit !important;
+          font-size: 14px !important;
+          outline: none;
+          transition: all 0.3s ease;
+        }
+
+        .premium-input:focus {
+          border-color: #0088cc !important;
+          box-shadow: 0 0 20px rgba(0, 136, 204, 0.15);
+        }
+
+        .connect-btn-tg {
+          width: 100%;
+          background: linear-gradient(135deg, #0088cc 0%, #00a8ff 100%);
+          border: none;
+          color: #fff;
+          font-weight: 800;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          box-shadow: 0 15px 30px -5px rgba(0, 136, 204, 0.5);
+          transition: all 0.3s ease;
+        }
+
+        .connect-btn-tg:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 20px 40px -5px rgba(0, 136, 204, 0.6);
+        }
+
+        .disconnect-btn, .disconnect-btn-tg {
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          color: #ef4444;
+          padding: 12px 28px;
+          border-radius: 14px;
+          font-weight: 700;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .disconnect-btn:hover, .disconnect-btn-tg:hover {
+          background: #ef4444;
+          color: #fff;
+        }
+
+        .error-badge {
+          margin-top: 16px;
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          color: #ef4444;
+          font-weight: 600;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+
+        .timer-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          animation: pulse-ring 1.5s infinite;
+        }
+
+        @keyframes pulse-ring {
+          0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
+          70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+          100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+        }
+
+        .success-glow {
+          box-shadow: 0 0 40px rgba(34, 197, 94, 0.2);
+          animation: float 4s infinite ease-in-out;
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-12px); }
+        }
+
+        .status-badge, .status-badge-blue {
+          box-shadow: 0 0 15px currentColor;
+        }
+      `}</style>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { showToast, showConfirm } from "@/lib/swal";
 
 import { getMe } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
 
 function SkeletonRow() {
   return (
@@ -106,27 +107,23 @@ export default function UsersPage() {
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-                Users
-              </h1>
-              {!loading && (
-                <span className="badge badge-count" style={{ fontSize: 13 }}>
-                  {users.length}
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: 0 }}>
-              Manage users and their permissions
-            </p>
-          </div>
-          <button className="btn-primary" onClick={handleCreateNew}>
-            <PlusIcon />
-            Add User
-          </button>
-        </div>
+        <PageHeader 
+          title="Users" 
+          description="Manage administrative users, roles, and system permissions for your AI platform."
+          badge={
+            !loading && (
+              <span className="badge badge-count" style={{ fontSize: 13 }}>
+                {users.length}
+              </span>
+            )
+          }
+          action={
+            <button className="btn-primary" onClick={handleCreateNew}>
+              <PlusIcon />
+              Add User
+            </button>
+          }
+        />
 
         {/* Error state */}
         {error && (

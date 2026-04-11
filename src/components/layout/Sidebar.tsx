@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { logout } from "@/app/actions/auth";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { BotIcon, UserIcon, FaqIcon, KnowledgeIcon, ActionIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, MenuIcon, CreditCardIcon, ChatIcon, AlertCircleIcon, DashboardIcon, PackageIcon, GlobeIcon, GridIcon } from "@/components/icons";
+import { BotIcon, UserIcon, FaqIcon, KnowledgeIcon, ActionIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, MenuIcon, CreditCardIcon, ChatIcon, AlertCircleIcon, DashboardIcon, PackageIcon, GlobeIcon, GridIcon, ListIcon } from "@/components/icons";
 import { getMe } from "@/app/actions/auth";
 import { User } from "@/types";
 import { showToast, showConfirm } from "@/lib/swal";
@@ -97,6 +97,7 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
     { label: "Tenants", path: "/tenants", icon: BotIcon, hideForRole: ["user"] },
     { label: "Models", path: "/models", icon: GridIcon, hideForRole: ["user"] },
     { label: "Products", path: "/products", icon: PackageIcon, showForRole: ["user"] },
+    { label: "Orders", path: "/orders", icon: ListIcon },
     { label: "Users", path: "/users", icon: UserIcon, hideForRole: ["user"] },
     { label: "FAQs", path: "/faqs", icon: FaqIcon },
     { label: "Knowledge", path: "/knowledge", icon: KnowledgeIcon },

@@ -9,6 +9,7 @@ import { TrashIcon } from "@/components/icons";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { showToast, showConfirm } from "@/lib/swal";
 import SessionModal from "@/components/sessions/SessionModal";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function SessionsPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -160,23 +161,17 @@ export default function SessionsPage() {
     <div style={{ minHeight: "100vh", padding: "32px 24px" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-                Sessions
-              </h1>
-              {!loadingSessions && selectedTenantId && (
-                <span className="badge badge-count" style={{ fontSize: 13 }}>
-                  {Array.isArray(sessions) ? sessions.length : 0}
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: 0 }}>
-              Manage chat sessions and conversation history
-            </p>
-          </div>
-        </div>
+        <PageHeader 
+          title="Sessions" 
+          description="Manage chat sessions and conversation history between your AI agent and customers."
+          badge={
+            !loadingSessions && selectedTenantId && (
+              <span className="badge badge-count" style={{ fontSize: 13 }}>
+                {Array.isArray(sessions) ? sessions.length : 0}
+              </span>
+            )
+          }
+        />
 
         {/* Tenant Selector */}
         {!loadingTenants && tenants.length > 1 && (

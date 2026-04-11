@@ -14,6 +14,7 @@ import {
   FaqIcon,
   PremiumBotIcon
 } from "@/components/icons";
+import PageHeader from "@/components/ui/PageHeader";
 
 // --- Chart Components ---
 
@@ -217,25 +218,22 @@ export default function DashboardPage() {
     <div style={{ minHeight: "100vh", padding: "32px 24px" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         
-        {/* Header Section */}
-        <div style={{ marginBottom: 40, animation: "slideRight 0.5s ease-out" }}>
-           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-              <div style={{ 
-                padding: 10, 
-                borderRadius: 12, 
-                background: "linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.1))",
-                color: "var(--accent-primary)"
-              }}>
-                <PremiumBotIcon />
-              </div>
-              <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>
-                Dashboard
-              </h1>
-           </div>
-           <p style={{ fontSize: 16, color: "var(--text-secondary)", margin: 0 }}>
-             Welcome back, <span style={{ color: "var(--foreground)", fontWeight: 600 }}>{user?.name}</span>. Here's what's happening today.
-           </p>
-        </div>
+        {/* Page Header */}
+        <PageHeader 
+          title="Dashboard" 
+          description={`Welcome back, ${user?.name}. Here's what's happening today in your AI ecosystem.`}
+          action={
+            <div style={{ 
+              padding: 10, 
+              borderRadius: 14, 
+              background: "linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.1))",
+              color: "var(--accent-primary)",
+              boxShadow: "0 8px 16px -4px rgba(99,102,241,0.1)"
+            }}>
+              <PremiumBotIcon size={28} />
+            </div>
+          }
+        />
 
         {error && (
           <div className="alert alert-error mb-8">

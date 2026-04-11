@@ -8,6 +8,7 @@ import { PlusIcon, EditIcon, TrashIcon, GridIcon } from "@/components/icons";
 import { fetchModels, deleteModel } from "@/app/actions/models";
 import { getMe } from "@/app/actions/auth";
 import { showToast, showConfirm } from "@/lib/swal";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function ModelsPage() {
   const [models, setModels] = useState<Model[]>([]);
@@ -90,27 +91,23 @@ export default function ModelsPage() {
     <div style={{ minHeight: "100vh", padding: "32px 24px" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-                AI Models
-              </h1>
-              {!loading && (
-                <span className="badge badge-count" style={{ fontSize: 13 }}>
-                  {models.length}
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: 0 }}>
-              Manage available AI models for your agent deployments
-            </p>
-          </div>
-          <button className="btn-primary" onClick={handleCreateNew}>
-            <PlusIcon />
-            Add Model
-          </button>
-        </div>
+        <PageHeader 
+          title="AI Models" 
+          description="Manage LLM configurations and provider settings that power your AI agents."
+          badge={
+            !loading && (
+              <span className="badge badge-count" style={{ fontSize: 13 }}>
+                {models.length}
+              </span>
+            )
+          }
+          action={
+            <button className="btn-primary" onClick={handleCreateNew}>
+              <PlusIcon />
+              Add Model
+            </button>
+          }
+        />
 
         {/* Error state */}
         {error && (

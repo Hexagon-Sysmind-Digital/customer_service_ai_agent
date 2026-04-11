@@ -9,6 +9,7 @@ import { PlusIcon, TrashIcon } from "@/components/icons";
 import ReservationModal from "@/components/reservations/ReservationModal";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { showToast, showConfirm } from "@/lib/swal";
+import PageHeader from "@/components/ui/PageHeader";
 
 
 export default function ReservationsPage() {
@@ -217,29 +218,25 @@ export default function ReservationsPage() {
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-                Reservations
-              </h1>
-              {!loadingReservations && selectedTenantId && (
-                <span className="badge badge-count" style={{ fontSize: 13 }}>
-                  {Array.isArray(reservations) ? reservations.length : 0}
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: 0 }}>
-              Manage customer reservations and appointments
-            </p>
-          </div>
-          {(currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
-            <button className="btn-primary" onClick={handleCreateNew} disabled={!selectedTenantId}>
-              <PlusIcon />
-              Add Reservation
-            </button>
-          )}
-        </div>
+        <PageHeader 
+          title="Reservations" 
+          description="Manage customer appointments and bookings processed by your AI agents."
+          badge={
+            !loadingReservations && selectedTenantId && (
+              <span className="badge badge-count" style={{ fontSize: 13 }}>
+                {Array.isArray(reservations) ? reservations.length : 0}
+              </span>
+            )
+          }
+          action={
+            (currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
+              <button className="btn-primary" onClick={handleCreateNew} disabled={!selectedTenantId}>
+                <PlusIcon />
+                Add Reservation
+              </button>
+            )
+          }
+        />
 
 
         {/* Tenant Selector */}

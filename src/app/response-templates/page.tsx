@@ -9,6 +9,7 @@ import { PlusIcon, EditIcon, TrashIcon } from "@/components/icons";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { showToast, showConfirm } from "@/lib/swal";
 import ResponseTemplateModal from "@/components/response-templates/ResponseTemplateModal";
+import PageHeader from "@/components/ui/PageHeader";
 
 export default function ResponseTemplatesPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -187,29 +188,25 @@ export default function ResponseTemplatesPage() {
     <div style={{ minHeight: "100vh", padding: "32px 24px" }}>
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-                Response Templates
-              </h1>
-              {!loadingTemplates && selectedTenantId && (
-                <span className="badge badge-count" style={{ fontSize: 13 }}>
-                  {Array.isArray(templates) ? templates.length : 0}
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: 0 }}>
-              Manage preset AI responses and translation texts
-            </p>
-          </div>
-          {(currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
-            <button className="btn-primary" onClick={handleCreateNew} disabled={!selectedTenantId}>
-              <PlusIcon />
-              Add Template
-            </button>
-          )}
-        </div>
+        <PageHeader 
+          title="Responses" 
+          description="Manage preset AI responses and automated translation texts for personalized interactions."
+          badge={
+            !loadingTemplates && selectedTenantId && (
+              <span className="badge badge-count" style={{ fontSize: 13 }}>
+                {Array.isArray(templates) ? templates.length : 0}
+              </span>
+            )
+          }
+          action={
+            (currentUser?.role === "admin" || currentUser?.role === "owner" || currentUser?.role === "user") && (
+              <button className="btn-primary" onClick={handleCreateNew} disabled={!selectedTenantId}>
+                <PlusIcon />
+                Add Template
+              </button>
+            )
+          }
+        />
 
         {/* Filters and Selectors */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 32 }}>

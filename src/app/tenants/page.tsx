@@ -9,6 +9,7 @@ import { fetchTenants, fetchTenantById, deleteTenant } from "@/app/actions/tenan
 import { getMe } from "@/app/actions/auth";
 import { User } from "@/types";
 import { showToast, showConfirm } from "@/lib/swal";
+import PageHeader from "@/components/ui/PageHeader";
 
 
 
@@ -362,31 +363,25 @@ export default function TenantsPage() {
     <div style={{ minHeight: "100vh", padding: "32px 24px" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-              <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
-                {currentUser?.role === "user" ? "My Agent" : "Tenants"}
-              </h1>
-              {!loading && currentUser?.role !== "user" && (
-                <span className="badge badge-count" style={{ fontSize: 13 }}>
-                  {tenants.length}
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: 0 }}>
-              {currentUser?.role === "user" ? "Manage your assigned AI agent configuration" : "Manage your AI agent configurations and deployments"}
-            </p>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {(currentUser?.role === "admin" || currentUser?.role === "owner") && (
+        <PageHeader 
+          title={currentUser?.role === "user" ? "My Agent" : "Tenants"} 
+          description={currentUser?.role === "user" ? "Manage your assigned AI agent configuration and system protocols." : "Manage and deploy multiple AI agent configurations across your organization."}
+          badge={
+            !loading && currentUser?.role !== "user" && (
+              <span className="badge badge-count" style={{ fontSize: 13 }}>
+                {tenants.length}
+              </span>
+            )
+          }
+          action={
+            (currentUser?.role === "admin" || currentUser?.role === "owner") && (
               <button className="btn-primary" onClick={handleCreateNew}>
                 <PlusIcon />
                 Add Tenant
               </button>
-            )}
-          </div>
-        </div>
+            )
+          }
+        />
 
         {/* Error state */}
         {error && (
