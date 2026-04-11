@@ -252,7 +252,7 @@ export default function IntegrationsPage() {
                                     width: 80, height: 80, borderRadius: "50%", background: "rgba(34, 197, 94, 0.15)",
                                     display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px"
                                 }}>
-                                    <CheckIcon size={36} color="#22c55e" />
+                                    <CheckIcon size={36} />
                                 </div>
                                 <h3 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 10px" }}>System Linked</h3>
                                 <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 24, lineHeight: 1.6 }}>Your agent is actively processing conversations on WhatsApp.</p>
@@ -379,7 +379,7 @@ export default function IntegrationsPage() {
                                 width: 80, height: 80, borderRadius: "50%", background: "rgba(0, 136, 204, 0.15)",
                                 display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px"
                             }}>
-                                <CheckIcon size={36} color="#0088cc" />
+                                <CheckIcon size={36} />
                             </div>
                             <h3 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 10px" }}>Engine Active</h3>
                             <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 24, lineHeight: 1.6 }}>The bot is successfully harvesting messages from Telegram.</p>
