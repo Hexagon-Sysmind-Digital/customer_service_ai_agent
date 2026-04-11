@@ -26,7 +26,30 @@ export async function applyPresetPersonality(presetName: string) {
   }
 }
 
+export async function updatePersonality(payload: { name: string, instructions: string }) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth_token")?.value;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/personalities`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error updating personality:", error);
+    return { success: false, error: "Failed to update personality" };
+  }
+}
+
 export async function getActivePersonality() {
+
   const cookieStore = await cookies();
   const token = cookieStore.get("auth_token")?.value;
 

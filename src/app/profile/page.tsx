@@ -6,7 +6,7 @@ import { User } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { UserIcon, CalendarIcon, ShieldIcon, MailIcon, BadgeIcon, EditIcon, GlobeIcon, CheckIcon, ChatIcon, ActionIcon } from "@/components/icons";
 import { showToast } from "@/lib/swal";
-import { getActivePersonality, applyPresetPersonality } from "@/app/actions/personalitiesApi";
+import { getActivePersonality, applyPresetPersonality, updatePersonality } from "@/app/actions/personalitiesApi";
 import PageHeader from "@/components/ui/PageHeader";
 
 export default function ProfilePage() {
@@ -29,13 +29,32 @@ export default function ProfilePage() {
     }
   };
 
-  const handleApplyPreset = async (presetName: string) => {
+  const PERSONALITY_PRESETS: Record<string, { name: string, instructions: string }> = {
+    profesional: {
+      name: "Profesional",
+      instructions: "Anda adalah asisten AI yang profesional, sopan, dan efisien. Gunakan kata ganti 'Saya' untuk agen dan 'Anda' untuk pelanggan. Hindari penggunaan bahasa gaul, singkatan yang tidak resmi, atau emoji yang berlebihan. Berikan jawaban yang akurat, faktual, dan langsung ke inti permasalahan."
+    },
+    friendly: {
+      name: "Friendly",
+      instructions: "Halo! Kamu adalah asisten AI yang ramah, hangat, dan sangat membantu. Gunakan bahasa yang santai tapi tetap sopan (seperti 'Halo kak' atau 'Terima kasih kak'). Jangan ragu untuk menggunakan emoji yang sesuai agar percakapan terasa lebih manusiawi dan nyaman bagi pelanggan."
+    },
+    concise: {
+      name: "Concise",
+      instructions: "Anda adalah asisten AI yang sangat to-the-point. Tugas utama Anda adalah memberikan informasi sesingkat dan sejelas mungkin. Jangan gunakan basa-basi atau kalimat pembuka/penutup yang panjang. Berikan fakta, data, atau jawaban langsung yang dibutuhkan pengguna."
+    }
+  };
+
+  const handleApplyPreset = async (presetId: string) => {
+    const presetData = PERSONALITY_PRESETS[presetId];
+    if (!presetData) return;
+
     setIsSavingPersonality(true);
     try {
-      const res = await applyPresetPersonality(presetName);
+      const res = await updatePersonality(presetData);
       if (res.success) {
-        showToast("success", `AI Personality updated to ${res.data.name}`);
-        setActivePersonality(res.data);
+        showToast("success", `AI Personality updated to ${presetData.name}`);
+        // Refresh active personality from response if available, otherwise use local data
+        setActivePersonality(res.data || { ...presetData, id: activePersonality?.id });
       } else {
         showToast("error", res.error || "Failed to update personality");
       }
