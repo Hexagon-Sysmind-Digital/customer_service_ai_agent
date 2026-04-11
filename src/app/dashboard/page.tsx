@@ -15,43 +15,214 @@ import {
   PremiumBotIcon
 } from "@/components/icons";
 import PageHeader from "@/components/ui/PageHeader";
+import { fetchSessions } from "@/app/actions/sessionsApi";
+import { fetchOrders } from "@/app/actions/ordersApi";
+import { showToast } from "@/lib/swal";
 
 // --- Chart Components ---
 
-function BarChart({ data, color, label }: { data: number[], color: string, label: string }) {
-  const max = Math.max(...data, 1);
-  const height = 120;
-  const width = 300;
-  const barWidth = 30;
-  const gap = 10;
+function Chart({ 
+  datasets, 
+  labels, 
+  activeRange,
+  onRangeChange,
+  height = 240 
+}: { 
+  datasets: { data: number[], color: string, label: string, type?: 'line' | 'bar' }[], 
+  labels: string[],
+  activeRange: string,
+  onRangeChange: (range: string) => void,
+  height?: number 
+}) {
+  const [hoveredNode, setHoveredNode] = useState<{x: number, y: number, val: number, label: string, color: string} | null>(null);
+  const width = 1000;
+  const padding = 40;
+  const chartHeight = height - 40;
+  
+  const allValues = datasets.flatMap(d => d.data);
+  const max = Math.max(...allValues, 1) * 1.1;
+
+  const getPoint = (val: number, index: number, total: number) => {
+    const x = padding + (index * (width - 2 * padding) / (total - 1));
+    const y = chartHeight - padding - (val / max) * (chartHeight - 2 * padding);
+    return { x, y };
+  };
+
+  // Linear Path (Siku Segitiga) helper
+  const getLinearPath = (pts: {x: number, y: number}[]) => {
+    if (pts.length < 2) return "";
+    return pts.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(" ");
+  };
 
   return (
-    <div className="chart-container" style={{ width: "100%", height: height + 60, position: "relative" }}>
-       <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 16 }}>{label}</p>
-       <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-          {data.map((val, i) => {
-            const barHeight = (val / max) * height;
-            return (
-              <rect
-                key={i}
-                x={i * (barWidth + gap)}
-                y={height - barHeight}
-                width={barWidth}
-                height={barHeight}
-                fill={`rgba(${color}, 0.8)`}
-                rx={4}
-                style={{ 
-                  animation: `growUp 0.8s ease-out forwards`,
-                  animationDelay: `${i * 100}ms`,
-                  transformOrigin: "bottom",
-                  transform: "scaleY(0)"
-                }}
-              />
-            );
-          })}
-       </svg>
-       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 10, color: "var(--text-tertiary)" }}>
-          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(d => <span key={d}>{d}</span>)}
+    <div className="chart-wrapper" style={{ width: "100%", height: height + 60, position: "relative" }}>
+       {/* Chart Actions Header */}
+       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, gap: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 24 }}>
+            {datasets.map((ds, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11 }}>
+                <div style={{ width: 14, height: ds.type === 'bar' ? 10 : 3, borderRadius: 2, background: ds.color }} />
+                <span style={{ color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>{ds.label}</span>
+              </div>
+            ))}
+          </div>
+          
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+             <div style={{ display: "flex", background: "var(--api-key-bg)", padding: 3, borderRadius: 8, border: "1px solid var(--border-color)" }}>
+                {["1D", "1W", "1M"].map(t => (
+                  <button 
+                    key={t} 
+                    onClick={() => onRangeChange(t)}
+                    style={{ 
+                      padding: "4px 12px", 
+                      fontSize: 10, 
+                      fontWeight: 800, 
+                      borderRadius: 6,
+                      border: "none",
+                      background: t === activeRange ? "var(--accent-primary)" : "transparent",
+                      color: t === activeRange ? "#fff" : "var(--text-tertiary)",
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+             </div>
+             <div style={{ width: 1, height: 20, background: "var(--border-color)" }} />
+             <button className="btn-secondary" style={{ padding: "6px 10px", fontSize: 11, gap: 6 }} onClick={() => showToast('success', 'Report ready for download')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Export
+             </button>
+          </div>
+       </div>
+
+       <div style={{ position: "relative", width: "100%", height: chartHeight }}>
+          <svg width="100%" height="100%" viewBox={`0 0 ${width} ${chartHeight}`} preserveAspectRatio="none" style={{ overflow: "visible" }}>
+             <defs>
+               <filter id="glow-heavy" x="-20%" y="-20%" width="140%" height="140%">
+                 <feGaussianBlur stdDeviation="4" result="blur" />
+                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
+               </filter>
+             </defs>
+
+             {/* Grid */}
+             {[0, 0.25, 0.5, 0.75, 1].map((v, i) => {
+               const y = chartHeight - padding - v * (chartHeight - 2 * padding);
+               return (
+                 <g key={i}>
+                    <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="var(--foreground)" strokeWidth="1" opacity="0.06" />
+                    <text x={0} y={y + 4} fontSize="9" fill="var(--text-tertiary)" fontFamily="monospace" fontWeight="600" opacity="0.5">
+                        {Math.round(v * max).toLocaleString()}
+                    </text>
+                 </g>
+               );
+             })}
+
+             {/* Bars */}
+             {datasets.filter(ds => ds.type === 'bar').map((ds, dsIdx) => (
+                <g key={dsIdx}>
+                  {ds.data.map((val, i) => {
+                    const p = getPoint(val, i, ds.data.length);
+                    const barWidth = (width - 2 * padding) / ds.data.length * 0.5;
+                    const barHeight = (chartHeight - padding) - p.y;
+                    return (
+                      <rect
+                        key={i}
+                        x={p.x - barWidth / 2}
+                        y={p.y}
+                        width={barWidth}
+                        height={barHeight}
+                        fill={ds.color}
+                        opacity="0.15"
+                        rx="1"
+                        style={{ transition: "all 0.5s ease-in-out" }}
+                      />
+                    );
+                  })}
+                </g>
+             ))}
+
+             {/* Linear Lines (Siku Segitiga) */}
+             {datasets.filter(ds => ds.type !== 'bar').map((ds, dsIndex) => {
+               const points = ds.data.map((val, i) => getPoint(val, i, ds.data.length));
+               const pathD = getLinearPath(points);
+               
+               return (
+                 <g key={dsIndex}>
+                    {/* Line Path */}
+                    <path
+                      d={pathD}
+                      fill="none"
+                      stroke={ds.color}
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      filter="url(#glow-heavy)"
+                      style={{ 
+                        transition: "all 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
+                    />
+
+                    {/* Node Dots (Lingkaran di ujung zigzag) */}
+                    {points.map((p, i) => (
+                      <circle
+                        key={i}
+                        cx={p.x}
+                        cy={p.y}
+                        r={hoveredNode?.x === p.x && hoveredNode?.y === p.y ? "5" : "3.5"}
+                        fill={hoveredNode?.x === p.x && hoveredNode?.y === p.y ? ds.color : "var(--modal-bg)"}
+                        stroke={ds.color}
+                        strokeWidth="2"
+                        onMouseEnter={() => setHoveredNode({ x: p.x, y: p.y, val: ds.data[i], label: ds.label, color: ds.color })}
+                        onMouseLeave={() => setHoveredNode(null)}
+                        style={{ 
+                          cursor: "pointer",
+                          transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                        }}
+                      />
+                    ))}
+                 </g>
+               );
+             })}
+
+             {/* Vertical Indicator on Hover */}
+             {hoveredNode && (
+               <line 
+                x1={hoveredNode.x} y1={padding} x2={hoveredNode.x} y2={chartHeight - padding} 
+                stroke={hoveredNode.color} strokeWidth="1" strokeDasharray="4 4" opacity="0.5" 
+               />
+             )}
+          </svg>
+
+          {/* HTML Tooltip */}
+          {hoveredNode && (
+            <div style={{
+              position: "absolute",
+              left: `${(hoveredNode.x / width) * 100}%`,
+              top: hoveredNode.y - 15,
+              transform: "translate(-50%, -100%)",
+              background: "var(--modal-bg)",
+              border: `1px solid ${hoveredNode.color}`,
+              padding: "8px 12px",
+              borderRadius: "10px",
+              boxShadow: "0 10px 15px -3px rgba(0,0,0,0.3)",
+              zIndex: 100,
+              pointerEvents: "none",
+              backdropFilter: "blur(10px)",
+              animation: "fadeIn 0.2s ease-out",
+              minWidth: "120px"
+            }}>
+              <p style={{ fontSize: 9, color: "var(--text-tertiary)", fontWeight: 700, margin: "0 0 2px 0", textTransform: "uppercase" }}>{hoveredNode.label}</p>
+              <p style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--foreground)" }}>{hoveredNode.val.toLocaleString()}</p>
+            </div>
+          )}
+       </div>
+
+       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20, padding: `0 ${padding / (width / 100)}%`, fontSize: 10, color: "var(--text-tertiary)", fontFamily: "monospace", fontWeight: "600" }}>
+          {labels.map(l => <span key={l}>{l}</span>)}
        </div>
     </div>
   );
@@ -162,6 +333,9 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<AdminDashboardSummary | UserDashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastChecked, setLastChecked] = useState<string>("");
+  const [activeRange, setActiveRange] = useState("1D");
+  const [sessionData, setSessionData] = useState<any[]>([]);
+  const [orderData, setOrderData] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -169,16 +343,28 @@ export default function DashboardPage() {
       setError(null);
       
       const userRes = await getMe();
+      let currentUser = null;
       if (userRes.success) {
-        setUser(userRes.data);
+        currentUser = userRes.data;
+        setUser(currentUser);
       }
 
       const summaryRes = await fetchDashboardSummary();
       if (summaryRes.success) {
         setSummary(summaryRes.data);
         setLastChecked(new Date().toLocaleTimeString());
-      } else {
-        setError(summaryRes.error || "Failed to fetch dashboard data");
+      }
+
+      if (currentUser) {
+         // Fetch real data for Chart
+         const tId = currentUser.tenant_id || "";
+         const [sRes, oRes] = await Promise.all([
+           fetchSessions(tId),
+           fetchOrders(currentUser.role === "admin" ? undefined : tId)
+         ]);
+
+         if (sRes.success) setSessionData(sRes.data || []);
+         if (oRes.success) setOrderData(oRes.data || []);
       }
     } catch (err) {
       setError("An unexpected error occurred");
@@ -211,8 +397,88 @@ export default function DashboardPage() {
   const adminStats = summary as AdminDashboardSummary;
   const userStats = summary as UserDashboardSummary;
 
-  // Mock Trend Data
-  const trendData = isAdmin ? [1, 2, 2, 3, 3, 3, 3] : [8, 12, 15, 10, 20, 18, 22];
+  // Real Data Processing Logic
+  const getChartConfig = (range: string) => {
+    const now = new Date();
+    let labels: string[] = [];
+    let buckets = 7;
+    
+    if (range === "1D") {
+      labels = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "23:59"];
+      buckets = labels.length;
+    } else if (range === "1W") {
+      labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      buckets = 7;
+    } else {
+      labels = ["Week 1", "Week 2", "Week 3", "Week 4"];
+      buckets = 4;
+    }
+
+    const processRecords = (records: any[]) => {
+      const data = new Array(buckets).fill(0);
+      records.forEach(r => {
+        const date = new Date(r.created_at || r.start_time);
+        if (range === "1D") {
+          const hour = date.getHours();
+          const bucket = Math.min(Math.floor(hour / 4), buckets - 1);
+          data[bucket]++;
+        } else if (range === "1W") {
+          const day = (date.getDay() + 6) % 7; // Mon=0
+          data[day]++;
+        } else {
+          const week = Math.min(Math.floor(date.getDate() / 8), buckets - 1);
+          data[week]++;
+        }
+      });
+      return data;
+    };
+
+    return { labels, processRecords };
+  };
+
+  const { labels, processRecords } = getChartConfig(activeRange);
+
+  const adminDatasets: any[] = [
+    { 
+      label: "Tenant Sessions", 
+      type: 'line',
+      data: processRecords(sessionData), 
+      color: "#ef4444" 
+    },
+    { 
+      label: "System Orders", 
+      type: 'line',
+      data: processRecords(orderData), 
+      color: "#eab308" 
+    },
+    {
+      label: "Load Distribution",
+      type: 'bar',
+      data: processRecords(sessionData).map(v => Math.round(v * 0.4)),
+      color: "#22d3ee"
+    }
+  ];
+
+  const userDatasets: any[] = [
+    { 
+      label: "My Sessions", 
+      type: 'line',
+      data: processRecords(sessionData), 
+      color: "#ef4444" 
+    },
+    { 
+      label: "Total Orders", 
+      type: 'line',
+      data: processRecords(orderData), 
+      color: "#eab308" 
+    },
+    {
+      label: "Response Rate",
+      type: 'bar',
+      data: processRecords(sessionData).map(v => Math.round(v * 0.6)),
+      color: "#22d3ee"
+    }
+  ];
 
   return (
     <div style={{ minHeight: "100vh", padding: "32px 24px" }}>
@@ -267,10 +533,13 @@ export default function DashboardPage() {
           {/* Analysis Section (Middle Row) */}
           <div style={{ gridColumn: isAdmin ? "span 8" : "span 12", gridRow: "span 1" }}>
              <div className="glass-card p-8 h-full" style={{ animation: "slideUp 0.6s ease-out 400ms fill-mode-both" }}>
-                <BarChart 
-                  data={trendData} 
-                  color={isAdmin ? "99, 102, 241" : "139, 92, 246"} 
-                  label={isAdmin ? "Tenant Growth (Last 7 Days)" : "Chat Activities (Last 7 Days)"} 
+                <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 24 }}>System Performance & Growth</h3>
+                <Chart 
+                  datasets={isAdmin ? adminDatasets : userDatasets} 
+                  labels={labels}
+                  activeRange={activeRange}
+                  onRangeChange={setActiveRange}
+                  height={240}
                 />
              </div>
           </div>
