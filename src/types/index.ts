@@ -190,3 +190,25 @@ export interface DashboardResponse {
   data: AdminDashboardSummary | UserDashboardSummary;
   success: boolean;
 }
+
+export interface OrderItem {
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+}
+
+export interface Order {
+  id: string;
+  tenant_id: string;
+  user_id?: string;
+  items: OrderItem[];
+  total_price: number;
+  status: string;
+  customer_name: string;
+  customer_contact: string;
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+}

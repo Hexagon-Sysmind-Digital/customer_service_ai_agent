@@ -3,24 +3,7 @@
 import React from "react";
 import { CheckIcon, CloseIcon, UserIcon, MailIcon, CalendarIcon } from "@/components/icons";
 
-interface OrderItem {
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  unit_price: number;
-  subtotal: number;
-}
-
-interface Order {
-  id: string;
-  customer_name: string;
-  customer_contact: string;
-  total_price: number;
-  status: string;
-  items: OrderItem[];
-  notes?: string;
-  created_at: string;
-}
+import { Order } from "@/types";
 
 interface OrderDetailsModalProps {
   order: Order | null;

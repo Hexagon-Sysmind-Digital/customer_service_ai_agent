@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { fetchTenants, fetchTenantById } from "@/app/actions/tenants";
 import { fetchOrders, updateOrderStatus } from "@/app/actions/ordersApi";
 import { getMe } from "@/app/actions/auth";
-import { Tenant, User } from "@/types";
+import { Tenant, User, Order } from "@/types";
 import { PackageIcon } from "@/components/icons";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import PageHeader from "@/components/ui/PageHeader";
@@ -15,14 +15,14 @@ export default function OrdersPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string>("");
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   
   const [loadingTenants, setLoadingTenants] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const loadInitialData = useCallback(async () => {
