@@ -101,11 +101,14 @@ function TenantCard({ tenant, onEdit, onDelete, currentUser }: { tenant: Tenant,
         </div>
       </div>
 
-      {/* Status Badge */}
-      <div>
+      {/* Status & Type Badges */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
          <span className={`badge ${tenant.is_active ? "badge-active" : "badge-inactive"}`}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />
           {tenant.is_active ? "Active" : "Inactive"}
+        </span>
+        <span className="badge" style={{ background: "rgba(139, 92, 246, 0.1)", color: "#c084fc", textTransform: "capitalize" }}>
+          {tenant.type || "Standard"}
         </span>
       </div>
 

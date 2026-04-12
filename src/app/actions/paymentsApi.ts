@@ -94,7 +94,10 @@ export async function createPayment(payload: Record<string, unknown>) {
     })
 
     const data = await res.json()
-    if (!res.ok) return { success: false, error: data.message || 'Failed to create payment' }
+    if (!res.ok) {
+      console.error("Create Payment Backend Error:", data);
+      return { success: false, error: data.message || data.error || 'Failed to create payment' }
+    }
     return { success: true, data: data.data }
   } catch (err) {
     return { success: false, error: 'Network error' }

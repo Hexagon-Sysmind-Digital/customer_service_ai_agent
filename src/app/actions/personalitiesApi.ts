@@ -87,3 +87,45 @@ export async function activatePersonality(id: string) {
     return { success: false, error: "Failed to activate personality" };
   }
 }
+
+export async function updatePersonality(id: string, payload: { name?: string, tone?: string, language?: string, instructions?: string }) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth_token")?.value;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/personalities/${id}`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error updating personality:", error);
+    return { success: false, error: "Failed to update personality" };
+  }
+}
+
+export async function deletePersonality(id: string) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth_token")?.value;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/personalities/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error deleting personality:", error);
+    return { success: false, error: "Failed to delete personality" };
+  }
+}

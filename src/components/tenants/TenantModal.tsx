@@ -16,10 +16,19 @@ interface TenantModalProps {
 export default function TenantModal({ tenant, onClose, onSuccess, onError }: TenantModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const isEditing = !!tenant;
+  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+
+  const typeOptions = [
+    { value: "standard", label: "Standard / General" },
+    { value: "clinic", label: "Clinic / Healthcare" },
+    { value: "workshop", label: "Workshop / Auto" },
+    { value: "retail", label: "Retail Store" },
+  ];
 
   const [form, setForm] = useState({
     name: tenant?.name || "",
     is_active: tenant?.is_active ?? true, // Default to true for new tenants
+    type: tenant?.type || "standard",
     welcome_message: tenant?.config?.welcome_message || "",
     model_name: tenant?.config?.model_name || "qwen-plus",
     temperature: tenant?.config?.temperature ?? 0.7,
@@ -65,6 +74,7 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
       const payload = {
         name: form.name,
         is_active: form.is_active,
+        type: form.type,
         config: {
           welcome_message: form.welcome_message,
           model_name: form.model_name,
@@ -190,6 +200,47 @@ export default function TenantModal({ tenant, onClose, onSuccess, onError }: Ten
               <span style={{ fontSize: 10, fontWeight: 700, color: form.is_active ? "#22c55e" : "var(--text-tertiary)", marginTop: 2 }}>
                 {form.is_active ? "ACTIVE" : "INACTIVE"}
               </span>
+            </div>
+          </div>
+
+          {/* Type Selection */}
+          <div style={fieldGroupStyle}>
+            <label style={labelStyle}>Business Type *</label>
+            <div style={{ position: "relative" }}>
+              <div 
+                className="input-field"
+                onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
+                style={{ 
+                  padding: "10px 14px", borderRadius: "10px", border: "1.5px solid var(--input-border)", background: "var(--input-bg)", color: "var(--foreground)", fontSize: 13, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center"
+                }}
+              >
+                <span>{typeOptions.find(t => t.value === form.type)?.label || "Select Type"}</span>
+                <span style={{ transform: isTypeDropdownOpen ? "rotate(180deg)" : "none", transition: "0.2s", fontSize: 10 }}>▼</span>
+              </div>
+              
+              {isTypeDropdownOpen && (
+                <div style={{ position: "absolute", top: "100%", left: 0, right: 0, marginTop: 4, background: "var(--input-bg)", border: "1px solid var(--card-border)", borderRadius: "10px", zIndex: 50, overflow: "hidden", boxShadow: "0 15px 30px rgba(0,0,0,0.3)" }}>
+                  {typeOptions.map((t) => (
+                    <div 
+                      key={t.value}
+                      onClick={() => { updateField("type", t.value); setIsTypeDropdownOpen(false); }}
+                      style={{ 
+                        padding: "12px 14px", 
+                        fontSize: 13, 
+                        cursor: "pointer", 
+                        background: form.type === t.value ? "var(--accent-primary)" : "transparent", 
+                        color: form.type === t.value ? "#fff" : "var(--foreground)", 
+                        borderBottom: "1px solid rgba(255,255,255,0.05)",
+                        transition: "background 0.2s"
+                      }}
+                      onMouseEnter={(e) => { if(form.type !== t.value) e.currentTarget.style.background = "rgba(255,255,255,0.05)" }}
+                      onMouseLeave={(e) => { if(form.type !== t.value) e.currentTarget.style.background = "transparent" }}
+                    >
+                      {t.label}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

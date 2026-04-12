@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { PlusIcon, CreditCardIcon, CheckIcon, CloseIcon, ChevronRightIcon } from "@/components/icons";
 import { showToast } from "@/lib/swal";
 import { fetchPayments, createPayment, uploadPaymentProof } from "@/app/actions/paymentsApi";
+import { fetchCredits, fetchPaymentStatus } from "@/app/actions/credits";
+import { Credit, PaymentStatus } from "@/types";
 
 // ========== CUSTOM DROPDOWN COMPONENT ==========
 function CustomDropdown({ label, items, value, onSelect }: { label: string, items: any[], value: string, onSelect: (v: string) => void }) {
@@ -63,6 +65,8 @@ function CustomDropdown({ label, items, value, onSelect }: { label: string, item
 
 export default function BillingPage() {
   const [payments, setPayments] = useState<any[]>([]);
+  const [credits, setCredits] = useState<Credit[]>([]);
+  const [paymentStat, setPaymentStat] = useState<PaymentStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -76,8 +80,16 @@ export default function BillingPage() {
 
   const loadData = async () => {
     setLoading(true);
-    const res = await fetchPayments();
-    if (res.success) setPayments(res.data);
+    const [resPayments, resCredits, resStatus] = await Promise.all([
+        fetchPayments(),
+        fetchCredits(),
+        fetchPaymentStatus()
+    ]);
+    
+    if (resPayments.success) setPayments(resPayments.data);
+    if (resCredits.success) setCredits(resCredits.data);
+    if (resStatus.success) setPaymentStat(resStatus.data as PaymentStatus);
+    
     setLoading(false);
   };
 
@@ -137,13 +149,78 @@ export default function BillingPage() {
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 32 }}>
             <div style={{ background: "linear-gradient(135deg, #6366f1, #818cf8)", padding: 20, borderRadius: 20, color: "#fff", boxShadow: "0 8px 16px rgba(99,102,241,0.2)" }}>
-                <div style={{ opacity: 0.8, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>Available</div>
-                <div style={{ fontSize: 24, fontWeight: 800 }}>{formatCurrency(payments.reduce((acc, p) => p.status === 'success' ? acc + p.amount : acc, 0))}</div>
+                <div style={{ opacity: 0.8, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>Available AI Credits</div>
+                <div style={{ fontSize: 24, fontWeight: 800 }}>{paymentStat?.total_credits ? formatCurrency(paymentStat.total_credits) : "0"}</div>
             </div>
             <div style={{ background: "var(--card-bg)", border: '1px solid var(--card-border)', padding: 20, borderRadius: 20 }}>
-                <div style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>Pending</div>
-                <div style={{ fontSize: 24, fontWeight: 800 }}>{payments.filter(p => p.status === 'pending').length}</div>
+                <div style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>Unpaid Subscriptions</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: (paymentStat?.unpaid_invoices || 0) > 0 ? "var(--accent-red)" : "var(--foreground)" }}>{paymentStat?.unpaid_invoices || 0}</div>
             </div>
+            <div style={{ background: "var(--card-bg)", border: '1px solid var(--card-border)', padding: 20, borderRadius: 20 }}>
+                <div style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>Active Subscription End</div>
+                <div style={{ fontSize: 16, fontWeight: 800, marginTop: 6 }}>
+                  {credits.length > 0 && credits[0].subscription_end ? new Date(credits[0].subscription_end).toLocaleDateString() : "No Active Pack"}
+                </div>
+            </div>
+        </div>
+
+        {/* AI Credits Subscriptions / Invoices (GetCredits) */}
+        <div style={{ background: "var(--card-bg)", borderRadius: 20, border: "1px solid var(--card-border)", overflow: "hidden", marginBottom: 32 }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--card-border)", fontWeight: 700 }}>AI Subscription Credits</div>
+            {loading ? (
+                <div style={{ padding: 40, textAlign: "center" }}>Loading...</div>
+            ) : credits.length === 0 ? (
+                <div style={{ padding: 40, textAlign: "center", color: "var(--text-tertiary)" }}>No subscription records found.</div>
+            ) : (
+                <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead>
+                            <tr style={{ textAlign: "left", fontSize: 11, color: "var(--text-tertiary)", background: "rgba(99, 115, 171, 0.04)" }}>
+                                <th style={{ padding: "12px 20px" }}>Billing Month</th>
+                                <th style={{ padding: "12px 20px" }}>Subscription Period</th>
+                                <th style={{ padding: "12px 20px" }}>Due Date</th>
+                                <th style={{ padding: "12px 20px" }}>Amount</th>
+                                <th style={{ padding: "12px 20px" }}>Status</th>
+                                <th style={{ padding: "12px 20px" }}>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {credits.map(c => (
+                                <tr key={c.id} style={{ borderBottom: "1px solid var(--card-border)", fontSize: 13 }}>
+                                    <td style={{ padding: "14px 20px", fontWeight: 600 }}>{c.billing_month}</td>
+                                    <td style={{ padding: "14px 20px", color: 'var(--text-secondary)' }}>
+                                        {new Date(c.subscription_start).toLocaleDateString()} - {new Date(c.subscription_end).toLocaleDateString()}
+                                    </td>
+                                    <td style={{ padding: "14px 20px", color: 'var(--text-secondary)' }}>{new Date(c.due_date).toLocaleDateString()}</td>
+                                    <td style={{ padding: "14px 20px", fontWeight: 700 }}>{formatCurrency(c.amount)}</td>
+                                    <td style={{ padding: "14px 20px" }}>
+                                        <span style={{ 
+                                            padding: "4px 8px", borderRadius: 8, fontSize: 10, fontWeight: 700, textTransform: "uppercase",
+                                            background: c.status === 'active' || c.status === 'paid' ? "rgba(34,197,94,0.1)" : c.status === 'overdue' ? "rgba(239,68,68,0.1)" : "rgba(245,158,11,0.1)",
+                                            color: c.status === 'active' || c.status === 'paid' ? "#10b981" : c.status === 'overdue' ? "#ef4444" : "#f59e0b"
+                                        }}>
+                                            {c.status}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: "14px 20px" }}>
+                                        {c.status !== 'paid' && c.status !== 'active' && (
+                                            <button 
+                                                onClick={() => {
+                                                    setFormData({ ...formData, amount: c.amount, credit_id: c.id });
+                                                    setShowModal(true);
+                                                }}
+                                                style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--accent-primary)", color: "var(--accent-primary)", background: "transparent", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                                            >
+                                                Pay Now
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
 
         {/* History Table */}
@@ -190,12 +267,25 @@ export default function BillingPage() {
             <div className="modal-overlay">
                 <div className="modal-content-compact">
                     <div className="modal-header-compact">
-                        <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Top Up</h2>
+                        <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Top Up / Pay</h2>
                         <button onClick={() => setShowModal(false)} className="close-btn-compact"><CloseIcon /></button>
                     </div>
 
                     <div className="modal-body-scroll">
                         <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }}>
+                            <div className="form-group">
+                                <label>Target Invoice / Credit</label>
+                                <CustomDropdown 
+                                    label="Select Invoice to Pay"
+                                    items={credits.filter(c => c.status !== 'paid').map(c => ({ value: c.id, label: `${c.billing_month} - ${formatCurrency(c.amount)}` }))}
+                                    value={(formData as any).credit_id || ""}
+                                    onSelect={v => {
+                                        const selected = credits.find(c => c.id === v);
+                                        setFormData({...formData, credit_id: v, amount: selected ? selected.amount : formData.amount} as any);
+                                    }}
+                                />
+                            </div>
+
                             <div className="form-group">
                                 <label>Amount (IDR)</label>
                                 <div className="amount-input-box">
@@ -205,13 +295,6 @@ export default function BillingPage() {
                                         value={formData.amount || ""} 
                                         onChange={e => setFormData({...formData, amount: Number(e.target.value)})}
                                     />
-                                </div>
-                                <div className="quick-amounts">
-                                    {[100000, 250000, 500000].map(amt => (
-                                        <button key={amt} type="button" onClick={() => setFormData({...formData, amount: amt})} className={formData.amount === amt ? 'active' : ''}>
-                                            {amt/1000}k
-                                        </button>
-                                    ))}
                                 </div>
                             </div>
 

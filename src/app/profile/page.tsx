@@ -6,7 +6,7 @@ import { User } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { UserIcon, CalendarIcon, ShieldIcon, MailIcon, BadgeIcon, EditIcon, GlobeIcon, CheckIcon, ChatIcon, ActionIcon } from "@/components/icons";
 import { showToast } from "@/lib/swal";
-import { createPersonality, getPersonalities, activatePersonality } from "@/app/actions/personalitiesApi";
+import { createPersonality, getPersonalities, activatePersonality, updatePersonality, deletePersonality } from "@/app/actions/personalitiesApi";
 import PageHeader from "@/components/ui/PageHeader";
 
 export default function ProfilePage() {
@@ -14,18 +14,24 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
+  // Personality CRUD States
+  const [personalities, setPersonalities] = useState<any[]>([]);
   const [activePersonality, setActivePersonality] = useState<any>(null);
   const [isSavingPersonality, setIsSavingPersonality] = useState(false);
+  const [isPersonalityModalOpen, setIsPersonalityModalOpen] = useState(false);
+  const [editingPersonality, setEditingPersonality] = useState<any>(null);
 
   useEffect(() => {
     fetchUser();
-    fetchActivePersonality();
+    fetchPersonalities();
   }, []);
 
-  const fetchActivePersonality = async () => {
+  const fetchPersonalities = async () => {
     const res = await getPersonalities();
     if (res.success && res.data) {
       const pData = Array.isArray(res.data) ? res.data : [res.data];
+      setPersonalities(pData);
       const active = pData.find((p: any) => p && p.is_active);
       if (active) {
         setActivePersonality(active);
@@ -35,66 +41,44 @@ export default function ProfilePage() {
     }
   };
 
-  const PERSONALITY_PRESETS: Record<string, { name: string, tone: string, language: string, instructions: string }> = {
-    profesional: {
-      name: "Profesional",
-      tone: "Formal, efisien, dan sopan",
-      language: "Indonesian (Formal/Baku)",
-      instructions: "Gunakan bahasa Indonesia yang formal dan sopan (Saya/Anda). Fokus pada efisiensi informasi dan kejelasan. Hindari singkatan alay atau emoji berlebihan."
-    },
-    friendly: {
-      name: "Friendly",
-      tone: "Ramah, ceria, dan hangat",
-      language: "Indonesian (Santai)",
-      instructions: "Halo! Kamu adalah asisten AI yang ramah, hangat, dan sangat membantu. Gunakan bahasa yang santai tapi tetap sopan (seperti 'Halo kak' atau 'Terima kasih kak'). Jangan ragu untuk menggunakan emoji yang sesuai agar percakapan terasa lebih manusiawi dan nyaman bagi pelanggan."
-    },
-    concise: {
-      name: "Concise",
-      tone: "To the point, efisien",
-      language: "Indonesian (Straightforward)",
-      instructions: "Anda adalah asisten AI yang sangat to-the-point. Tugas utama Anda adalah memberikan informasi sesingkat dan sejelas mungkin. Jangan gunakan basa-basi atau kalimat pembuka/penutup yang panjang. Berikan fakta, data, atau jawaban langsung yang dibutuhkan pengguna."
-    }
-  };
-
-  const handleApplyPreset = async (presetId: string) => {
-    const presetData = PERSONALITY_PRESETS[presetId];
-    if (!presetData) return;
-
+  const handleActivate = async (id: string) => {
     setIsSavingPersonality(true);
     try {
-      const allRes = await getPersonalities();
-      let existingId = null;
-
-      if (allRes.success && allRes.data) {
-        const pData = Array.isArray(allRes.data) ? allRes.data : [allRes.data];
-        const existing = pData.find((p: any) => p && p.name.toLowerCase() === presetData.name.toLowerCase());
-        if (existing) {
-          existingId = existing.id;
-        }
-      }
-
-      if (existingId) {
-        const actRes = await activatePersonality(existingId);
-        if (actRes.success) {
-          showToast("success", `AI Personality updated to ${presetData.name}`);
-          fetchActivePersonality();
-        } else {
-          showToast("error", actRes.error || "Failed to activate personality");
-        }
+      const actRes = await activatePersonality(id);
+      if (actRes.success) {
+        showToast("success", "AI Personality activated!");
+        fetchPersonalities();
       } else {
-        const createRes = await createPersonality(presetData);
-        if (createRes.success) {
-          showToast("success", `AI Personality updated to ${presetData.name}`);
-          fetchActivePersonality();
-        } else {
-          showToast("error", createRes.error || "Failed to create personality");
-        }
+        showToast("error", actRes.error || "Failed to activate personality");
       }
     } catch (err) {
       showToast("error", "An unexpected error occurred");
     } finally {
       setIsSavingPersonality(false);
     }
+  };
+
+  const handleDeletePersonality = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this personality?")) return;
+    setIsSavingPersonality(true);
+    try {
+      const delRes = await deletePersonality(id);
+      if (delRes.success) {
+        showToast("success", "AI Personality deleted!");
+        fetchPersonalities();
+      } else {
+        showToast("error", delRes.error || "Failed to delete personality");
+      }
+    } catch (err) {
+      showToast("error", "An unexpected error occurred");
+    } finally {
+      setIsSavingPersonality(false);
+    }
+  };
+
+  const handleOpenPersonalityModal = (personality?: any) => {
+    setEditingPersonality(personality || null);
+    setIsPersonalityModalOpen(true);
   };
 
   const fetchUser = async () => {
@@ -260,62 +244,64 @@ export default function ProfilePage() {
 
         {/* AI Personality Section */}
         <div style={{ marginTop: 48 }}>
-          <div style={{ marginBottom: 24, display: "flex", alignItems: "baseline", gap: 12 }}>
-            <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: "-0.03em" }}>AI Personality</h2>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent-primary)" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+              <h2 style={{ fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: "-0.03em" }}>AI Personality</h2>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent-primary)" }} />
+            </div>
+            <button 
+              className="btn-primary" 
+              onClick={() => handleOpenPersonalityModal()}
+              style={{ padding: "10px 18px", fontSize: 14 }}
+            >
+              + Custom Personality
+            </button>
           </div>
-          <p style={{ fontSize: 16, color: "var(--text-secondary)", marginTop: -16, marginBottom: 32 }}>Choose a preset to define how your AI agent should converse with customers.</p>
+          <p style={{ fontSize: 16, color: "var(--text-secondary)", marginTop: -16, marginBottom: 32 }}>Create and manage custom personas to define how your AI agent converses with customers.</p>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
-            <PersonalityCard 
-              name="Profesional" 
-              presetId="profesional"
-              description="Formal, sopan (Saya/Anda), dan sangat efisien dalam memberikan informasi." 
-              icon={<BadgeIcon size={24} />}
-              isActive={activePersonality?.name?.toLowerCase() === "profesional"}
-              loading={isSavingPersonality}
-              onSelect={handleApplyPreset}
-            />
-            <PersonalityCard 
-              name="Friendly" 
-              presetId="friendly"
-              description="Ramah, ceria, menggunakan emoji yang pas, dan bahasa yang santai tapi tetap sopan." 
-              icon={<ChatIcon size={24} />}
-              isActive={activePersonality?.name?.toLowerCase() === "friendly"}
-              loading={isSavingPersonality}
-              onSelect={handleApplyPreset}
-            />
-            <PersonalityCard 
-              name="Concise" 
-              presetId="concise"
-              description="To the point, sangat singkat, dan hanya memberikan fakta yang diperlukan." 
-              icon={<ActionIcon size={24} />}
-              isActive={activePersonality?.name?.toLowerCase() === "concise"}
-              loading={isSavingPersonality}
-              onSelect={handleApplyPreset}
-            />
-          </div>
-
-          {activePersonality && (
-            <div className="glass-card" style={{ marginTop: 32, padding: "24px", background: "rgba(99, 102, 241, 0.03)", border: "1px solid rgba(99, 102, 241, 0.1)", borderRadius: 20 }}>
-              <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
-                <div style={{ 
-                  width: 40, height: 40, borderRadius: 12, background: "var(--accent-primary)", 
-                  display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0,
-                  boxShadow: "0 10px 20px -5px rgba(99, 102, 241, 0.3)"
-                }}>
-                  <GlobeIcon size={20} />
-                </div>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                    <h4 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Active Instructions</h4>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: "var(--accent-primary)", background: "rgba(99, 102, 241, 0.1)", padding: "2px 8px", borderRadius: 6 }}>LIVE</span>
+            {personalities.length === 0 ? (
+               <div style={{ padding: 40, textAlign: "center", background: "var(--card-bg)", borderRadius: 20, border: "1px dashed var(--border-color)", gridColumn: "1 / -1" }}>
+                  <p style={{ color: "var(--text-tertiary)", margin: 0 }}>No personalities found. Create one to get started.</p>
+               </div>
+            ) : (
+              personalities.map((p) => (
+                <div key={p.id} className="glass-card" style={{ padding: 24, position: "relative", border: p.is_active ? "2px solid var(--accent-primary)" : "1px solid var(--border-color)" }}>
+                  {p.is_active && (
+                    <div style={{ position: "absolute", top: -12, right: 20, background: "var(--accent-primary)", color: "#fff", padding: "4px 12px", borderRadius: 12, fontSize: 11, fontWeight: 800, textTransform: "uppercase", boxShadow: "0 4px 10px rgba(99,102,241,0.4)" }}>
+                      Live Active
+                    </div>
+                  )}
+                  <h3 style={{ margin: "0 0 12px", fontSize: 18, color: "var(--foreground)" }}>{p.name}</h3>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                     <span className="badge" style={{ fontSize: 11, background: "rgba(99,102,241,0.1)", color: "#818cf8" }}>{p.tone}</span>
+                     <span className="badge" style={{ fontSize: 11, background: "rgba(34,197,94,0.1)", color: "#22c55e" }}>{p.language}</span>
                   </div>
-                  <p style={{ margin: 0, fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6 }}>{activePersonality.instructions}</p>
+                  <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, minHeight: 60, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", margin: 0 }}>{p.instructions}</p>
+                  
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border-color)" }}>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <button onClick={() => handleOpenPersonalityModal(p)} style={{ background: "none", border: "none", color: "var(--text-tertiary)", cursor: "pointer", display: "flex", alignItems: "center" }}><EditIcon size={18} /></button>
+                      <button onClick={() => handleDeletePersonality(p.id)} style={{ background: "none", border: "none", color: "var(--accent-red)", cursor: "pointer", display: "flex", alignItems: "center" }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      </button>
+                    </div>
+                    {!p.is_active && (
+                       <button 
+                         onClick={() => handleActivate(p.id)} 
+                         disabled={isSavingPersonality}
+                         style={{ background: "var(--input-bg)", border: "1px solid var(--border-color)", padding: "8px 16px", borderRadius: 8, color: "var(--foreground)", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "0.2s" }}
+                         onMouseEnter={(e) => { e.currentTarget.style.background = "var(--background)" }}
+                         onMouseLeave={(e) => { e.currentTarget.style.background = "var(--input-bg)" }}
+                       >
+                         {isSavingPersonality ? "..." : "Activate Now"}
+                       </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </div>
       </div>
 
@@ -327,6 +313,17 @@ export default function ProfilePage() {
             setIsEditModalOpen(false);
             fetchUser();
           }} 
+        />
+      )}
+
+      {isPersonalityModalOpen && (
+        <PersonalityModal 
+          personality={editingPersonality}
+          onClose={() => setIsPersonalityModalOpen(false)}
+          onSuccess={() => {
+            setIsPersonalityModalOpen(false);
+            fetchPersonalities();
+          }}
         />
       )}
     </div>
@@ -409,6 +406,109 @@ function EditProfileModal({ user, onClose, onSuccess }: { user: User, onClose: (
             <button type="button" className="btn-secondary" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
             <button type="submit" className="btn-primary" disabled={submitting} style={{ flex: 1 }}>
               {submitting ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function PersonalityModal({ personality, onClose, onSuccess }: { personality?: any, onClose: () => void, onSuccess: () => void }) {
+  const [name, setName] = useState(personality?.name || "");
+  const [tone, setTone] = useState(personality?.tone || "");
+  const [language, setLanguage] = useState(personality?.language || "");
+  const [instructions, setInstructions] = useState(personality?.instructions || "");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const payload = { name, tone, language, instructions };
+      
+      let res;
+      if (personality?.id) {
+        res = await updatePersonality(personality.id, payload);
+      } else {
+        res = await createPersonality(payload);
+      }
+
+      if (res.success) {
+        showToast("success", `Personality ${personality?.id ? 'updated' : 'created'} successfully`);
+        onSuccess();
+      } else {
+        showToast("error", res.error || "Failed to save personality");
+      }
+    } catch (err) {
+      showToast("error", "An unexpected error occurred");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-content glass-card" style={{ maxWidth: 550, padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "24px 32px", borderBottom: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>{personality?.id ? "Edit Personality" : "Create New Personality"}</h2>
+          <button type="button" onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-tertiary)", cursor: "pointer", fontSize: 20 }}>✕</button>
+        </div>
+        
+        <form onSubmit={handleSubmit} style={{ padding: "32px", display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Profile Name</label>
+              <input 
+                className="input-field" 
+                type="text" 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                placeholder="e.g. Gen-Z Vibes"
+                required 
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tone</label>
+              <input 
+                className="input-field" 
+                type="text" 
+                value={tone} 
+                onChange={(e) => setTone(e.target.value)} 
+                placeholder="e.g. Playful, Warm"
+                required 
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Language</label>
+            <input 
+              className="input-field" 
+              type="text" 
+              value={language} 
+              onChange={(e) => setLanguage(e.target.value)} 
+              placeholder="e.g. Bahasa gaul, English"
+              required 
+            />
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Core Instructions</label>
+            <textarea 
+              className="input-field" 
+              value={instructions} 
+              onChange={(e) => setInstructions(e.target.value)} 
+              placeholder="Explain how the AI should behave..."
+              rows={4}
+              required 
+            />
+          </div>
+
+          <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+            <button type="button" className="btn-secondary" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
+            <button type="submit" className="btn-primary" disabled={submitting} style={{ flex: 1 }}>
+              {submitting ? "Saving..." : "Save Personality"}
             </button>
           </div>
         </form>

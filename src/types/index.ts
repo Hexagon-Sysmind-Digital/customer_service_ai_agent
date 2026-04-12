@@ -15,6 +15,7 @@ export interface Tenant {
   name: string;
   api_key: string;
   is_active: boolean;
+  type?: string;
   max_requests_per_day: number;
   config: TenantConfig;
   created_at: string;
