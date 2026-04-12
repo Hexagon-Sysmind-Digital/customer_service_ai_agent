@@ -71,11 +71,21 @@ export default function BillingPage() {
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
-  const [formData, setFormData] = useState({
+  interface PaymentFormData {
+    amount: number;
+    payment_method: string;
+    proof_url: string;
+    notes: string;
+    credit_id?: string;
+    [key: string]: any;
+  }
+
+  const [formData, setFormData] = useState<PaymentFormData>({
     amount: 0,
     payment_method: "bank_transfer",
     proof_url: "",
-    notes: ""
+    notes: "",
+    credit_id: ""
   });
 
   const loadData = async () => {
@@ -278,10 +288,10 @@ export default function BillingPage() {
                                 <CustomDropdown 
                                     label="Select Invoice to Pay"
                                     items={credits.filter(c => c.status !== 'paid').map(c => ({ value: c.id, label: `${c.billing_month} - ${formatCurrency(c.amount)}` }))}
-                                    value={(formData as any).credit_id || ""}
+                                    value={formData.credit_id || ""}
                                     onSelect={v => {
                                         const selected = credits.find(c => c.id === v);
-                                        setFormData({...formData, credit_id: v, amount: selected ? selected.amount : formData.amount} as any);
+                                        setFormData({...formData, credit_id: v, amount: selected ? selected.amount : formData.amount});
                                     }}
                                 />
                             </div>
